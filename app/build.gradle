@@ -25,4 +25,7 @@ dependencies {
     testImplementation 'junit:junit:4.12'
     androidTestImplementation 'com.android.support.test:runner:1.0.2'
     androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'
+    compile 'com.arello-mobile:moxy:1.4.5'
+    annotationProcessor 'com.arello-mobile:moxy-compiler:1.4.5'
+    compile 'com.arello-mobile:moxy-android:1.4.5'
 }
