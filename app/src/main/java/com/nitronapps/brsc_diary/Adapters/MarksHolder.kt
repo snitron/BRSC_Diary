@@ -2,6 +2,7 @@ package com.nitronapps.brsc_diary.Adapters
 
 import android.annotation.SuppressLint
 import android.graphics.Color
+import android.util.Log
 import android.view.View
 import android.widget.TextView
 import com.nitronapps.brsc_diary.Data.TableMarks
@@ -21,18 +22,18 @@ class MarksHolder(itemView: View) : ChildViewHolder(itemView){
     }
 
     fun onBind(tableMarks: TableMarks, number: Int){
+        averageMark.setBackgroundColor(Color.WHITE)
         marks.text = tableMarks.m.trim()
         averageMark.text = tableMarks.average_marks.trim()
         averageMark.setTextColor(Color.BLACK)
 
-        if(!tableMarks.average_marks.equals("")) {
+        Log.w("am", number.toString() + tableMarks.average_marks.trim() + ".")
+        if(!tableMarks.average_marks.trim().equals("")) {
             if (tableMarks.average_marks.replace(',', '.').toDouble() <= 2.5)
                 averageMark.setBackgroundColor(Color.parseColor("#e74c3c"))
             if (tableMarks.average_marks.replace(',', '.').toDouble() in 2.5..3.5)
                 averageMark.setBackgroundColor(Color.parseColor("#f1c40f"))
-            if (tableMarks.average_marks.replace(',', '.').toDouble() in 3.5..4.5)
-                averageMark.setBackgroundColor(Color.parseColor("#2ecc71"))
-            if (tableMarks.average_marks.replace(',', '.').toDouble() in 4.5..5.0)
+            if (tableMarks.average_marks.replace(',', '.').toDouble() in 3.5..5.0)
                 averageMark.setBackgroundColor(Color.parseColor("#27ae60"))
         }
 

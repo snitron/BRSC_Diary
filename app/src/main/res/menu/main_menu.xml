@@ -1,9 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<menu xmlns:android="http://schemas.android.com/apk/res/android">
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools">
     <item
         android:id="@+id/nav_diary"
         android:icon="@drawable/baseline_list_black_48"
-        android:title="Дневник" />
+        android:title="Дневник"
+        />
 
     <item
         android:id="@+id/nav_table"
@@ -19,4 +22,8 @@
         android:id="@+id/nav_about"
         android:icon="@drawable/baseline_info_black_48"
         android:title="О приложении" />
+    <item
+        android:id="@+id/nav_quit"
+        android:icon="@drawable/baseline_exit_to_app_black_48"
+        android:title="Выйти" />
 </menu>

@@ -11,6 +11,8 @@ import android.widget.TextView
 import com.nitronapps.brsc_diary.Models.DayModel
 import com.nitronapps.brsc_diary.MainActivity
 import com.nitronapps.brsc_diary.R
+import com.nitronapps.brsc_diary.Adapters.LessonsAdapter
+
 
 class DayAdapter(val days: Array<DayModel>, val context: Context): RecyclerView.Adapter<DayAdapter.DayViewHolder>() {
 

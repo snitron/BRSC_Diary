@@ -10,7 +10,7 @@ import android.widget.TextView
 import com.nitronapps.brsc_diary.Models.DayModel
 import com.nitronapps.brsc_diary.R
 
-class LessonsAdapter(val dayModel: DayModel) : RecyclerView.Adapter<LessonsAdapter.LessonsViewHolder>() {
+ class LessonsAdapter(val dayModel: DayModel) : RecyclerView.Adapter<LessonsAdapter.LessonsViewHolder>() {
 
     val SPACES = 0
     val FILES = 1
@@ -65,6 +65,7 @@ class LessonsAdapter(val dayModel: DayModel) : RecyclerView.Adapter<LessonsAdapt
                 '3' -> result += "<p style=\"color:#ffd32a; align: center\">3</p>"
                 '4' -> result += "<p style=\"color:#2ecc71; align: center\">4</p>"
                 '5' -> result += "<p style=\"color:#2ecc71; align: center\">5</p>"
+                'Н' -> result += "<p style=\"color:#bdc3c7; align: center\">Н</p>"
                 else -> result += i
             }
         return result
@@ -79,4 +80,3 @@ class LessonsAdapter(val dayModel: DayModel) : RecyclerView.Adapter<LessonsAdapt
         val mark = itemView.findViewById<TextView>(R.id.textViewMark)
     }
 }
-

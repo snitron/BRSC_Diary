@@ -16,13 +16,13 @@ data class TableModel(val lesson: String,
 
 
     fun getLesson():Lesson{
-        val items = LinkedList<TableMarks>()
+        val marks = LinkedList<TableMarks>()
 
-        items.add(TableMarks(average_mark1, m1))
-        items.add(TableMarks(average_mark2, m2))
-        items.add(TableMarks(average_mark3, m3))
-        items.add(TableMarks(average_mark4, m4))
+        marks.add(TableMarks(average_mark1.trim(), m1.trim()))
+        marks.add(TableMarks(average_mark2.trim(), m2.trim()))
+        marks.add(TableMarks(average_mark3.trim(), m3.trim()))
+        marks.add(TableMarks(average_mark4.trim(), m4.trim()))
 
-        return Lesson(lesson, items)
+        return Lesson(lesson, marks)
     }
 }

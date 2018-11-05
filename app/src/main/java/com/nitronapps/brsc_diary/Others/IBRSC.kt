@@ -1,4 +1,4 @@
-package com.nitronapps.brsc_diary
+package com.nitronapps.brsc_diary.Others
 
 import com.nitronapps.brsc_diary.Models.DayModel
 import com.nitronapps.brsc_diary.Models.PersonModel
@@ -27,7 +27,7 @@ interface IBRSC {
                  @Query("password") password: String?,
                  @Query("userID") userID: String?): Call<Array<TableModel>>
 
-    @POST("parseResults.php")
+    @GET("parseResults.php")
     fun getResults(@Query("login") login : String?,
                  @Query("password") password: String?,
                  @Query("userID") userID: String?): Call<Array<ResultModel>>
