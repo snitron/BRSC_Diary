@@ -57,7 +57,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         if (!mSharedPreferences.contains("wasLogin") || !mSharedPreferences.getBoolean("wasLogin", false))
             startActivity(Intent(this, LoginActivity::class.java))
 
-        if (mSharedPreferences.contains("saved")) {
+       if (mSharedPreferences.contains("saved")) {
             val day = Gson().fromJson(mSharedPreferences.getString("saved", "[]"), Array<DayModel>::class.java)
             recyclerView.adapter = DayAdapter(day, applicationContext)
             recyclerView.layoutManager = LinearLayoutManager(applicationContext)
@@ -88,19 +88,16 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                     mSharedPreferences.getString("id", ""))
                     .enqueue(object : retrofit2.Callback<Array<DayModel>> {
                         override fun onFailure(call: Call<Array<DayModel>>, t: Throwable) {
-                            Toast.makeText(applicationContext, "ERR CONNECT", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(applicationContext, resources.getString(R.string.error_connection), Toast.LENGTH_SHORT).show()
                             swipeRefreshLayout.isRefreshing = false
                         }
 
                         override fun onResponse(call: Call<Array<DayModel>>, response: Response<Array<DayModel>>) {
-
-                            Log.w("logpass", response.isSuccessful.toString())
                             swipeRefreshLayout.isRefreshing = false
 
                             if (response.isSuccessful) {
                                 recyclerView.adapter = DayAdapter(response.body()!!, applicationContext)
                                 recyclerView.layoutManager = LinearLayoutManager(applicationContext)
-                                Toast.makeText(applicationContext, "OK CONNECT", Toast.LENGTH_SHORT).show()
                             }
                         }
 
@@ -117,19 +114,17 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                     mSharedPreferences.getString("id", ""))
                     .enqueue(object : retrofit2.Callback<Array<DayModel>> {
                         override fun onFailure(call: Call<Array<DayModel>>, t: Throwable) {
-                            Toast.makeText(applicationContext, "ERR CONNECT", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(applicationContext, resources.getString(R.string.error_connection), Toast.LENGTH_SHORT).show()
                             swipeRefreshLayout.isRefreshing = false
                         }
 
                         override fun onResponse(call: Call<Array<DayModel>>, response: Response<Array<DayModel>>) {
 
-                            Log.w("logpass", response.isSuccessful.toString())
                             swipeRefreshLayout.isRefreshing = false
 
                             if (response.isSuccessful) {
                                 recyclerView.adapter = DayAdapter(response.body()!!, applicationContext)
                                 recyclerView.layoutManager = LinearLayoutManager(applicationContext)
-                                Toast.makeText(applicationContext, "OK CONNECT", Toast.LENGTH_SHORT).show()
 
                                 mSharedPreferences.edit().putString("saved", Gson().toJson(response.body())).apply()
                             }
@@ -149,7 +144,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                     mSharedPreferences.getString("id", "test"))
                     .enqueue(object : retrofit2.Callback<Array<DayModel>> {
                         override fun onFailure(call: Call<Array<DayModel>>, t: Throwable) {
-                            Toast.makeText(applicationContext, "ERR CONNECT", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(applicationContext, resources.getString(R.string.error_connection), Toast.LENGTH_SHORT).show()
                             swipeRefreshLayout.isRefreshing = false
                         }
 
@@ -159,7 +154,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                             if (response.isSuccessful) {
                                 recyclerView.adapter = DayAdapter(response.body()!!, applicationContext)
                                 recyclerView.layoutManager = LinearLayoutManager(applicationContext)
-                                Toast.makeText(applicationContext, "OK CONNECT", Toast.LENGTH_SHORT).show()
 
                                 mSharedPreferences.edit().putInt("curWeek", mSharedPreferences.getInt("curWeek", 0) + 1).apply()
                             }
@@ -178,7 +172,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                     mSharedPreferences.getString("id", "test"))
                     .enqueue(object : retrofit2.Callback<Array<DayModel>> {
                         override fun onFailure(call: Call<Array<DayModel>>, t: Throwable) {
-                            Toast.makeText(applicationContext, "ERR CONNECT", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(applicationContext, resources.getString(R.string.error_connection), Toast.LENGTH_SHORT).show()
                             swipeRefreshLayout.isRefreshing = false
                         }
 
@@ -188,7 +182,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                             if (response.isSuccessful) {
                                 recyclerView.adapter = DayAdapter(response.body()!!, applicationContext)
                                 recyclerView.layoutManager = LinearLayoutManager(applicationContext)
-                                Toast.makeText(applicationContext, "OK CONNECT", Toast.LENGTH_SHORT).show()
 
                                 mSharedPreferences.edit().putInt("curWeek", mSharedPreferences.getInt("curWeek", 0) - 1).apply()
                             }
@@ -196,7 +189,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
                     })
         }
-
 
         val drawer = findViewById<DrawerLayout>(R.id.drawer_layout)
         val toggle = ActionBarDrawerToggle(
@@ -226,27 +218,24 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         when (p0.itemId) {
             R.id.nav_table -> {
                 val intent = Intent(this, TableActivity::class.java)
-                intent.putExtra("type", "table")
                 intent.addFlags(FLAG_ACTIVITY_NO_ANIMATION)
                 startActivity(intent)
             }
 
             R.id.nav_results -> {
-                val intent = Intent(this, TableActivity::class.java)
-                intent.putExtra("type", "results")
+                val intent = Intent(this, ResultActivity::class.java)
                 intent.addFlags(FLAG_ACTIVITY_NO_ANIMATION)
-
                 startActivity(intent)
             }
 
             R.id.nav_quit -> {
                 AlertDialog.Builder(this)
-                        .setTitle("Подтвердите действие")
-                        .setMessage("Вы действительно хотите выйти из аккаунта?")
-                        .setPositiveButton("Да", { dialog, which ->
+                        .setTitle(resources.getString(R.string.accept))
+                        .setMessage(resources.getString(R.string.accept_2))
+                        .setPositiveButton(resources.getString(R.string.yes), { dialog, which ->
                             deleteAccount()
                         })
-                        .setNegativeButton("Нет", { dialog, which ->
+                        .setNegativeButton(R.string.no, { dialog, which ->
                         })
                         .show()
             }
@@ -282,7 +271,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                         mSharedPreferences.getString("id", "test")).enqueue(
                         object : Callback<PersonModel> {
                             override fun onFailure(call: Call<PersonModel>, t: Throwable) {
-                                Log.w("getName", t.message)
+                                Toast.makeText(applicationContext, resources.getString(R.string.error_connection), Toast.LENGTH_LONG).show()
                             }
 
                             override fun onResponse(call: Call<PersonModel>, response: Response<PersonModel>) {
@@ -313,9 +302,9 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         mi.title = mNewName
     }
 
-
     fun deleteAccount(){
         mSharedPreferences.edit().clear().apply()
+        recyclerView.adapter = null
         startActivity(Intent(this, LoginActivity::class.java))
     }
 

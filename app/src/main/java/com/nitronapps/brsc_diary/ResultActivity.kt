@@ -5,15 +5,16 @@ import android.content.SharedPreferences
 import android.graphics.Color
 import android.graphics.Typeface
 import android.os.Bundle
-import android.support.constraint.ConstraintSet
 import android.support.design.widget.NavigationView
+import android.support.v4.view.GravityCompat
 import android.support.v7.app.ActionBarDrawerToggle
 import android.support.v7.app.AlertDialog
-import android.support.v7.app.AppCompatActivity;
+import android.support.v7.app.AppCompatActivity
 import android.support.v7.widget.LinearLayoutManager
 import android.text.Spannable
 import android.text.SpannableString
 import android.util.Log
+import android.view.Menu
 import android.view.MenuItem
 import android.widget.ImageView
 import android.widget.TextView
@@ -22,16 +23,21 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.nitronapps.brsc_diary.Adapters.ResultsAdapter
 import com.nitronapps.brsc_diary.Adapters.TableAdapter
-import com.nitronapps.brsc_diary.Data.*
+import com.nitronapps.brsc_diary.Data.APP_SETTINGS
+import com.nitronapps.brsc_diary.Data.Lesson
+import com.nitronapps.brsc_diary.Data.SERVER_ADRESS
 import com.nitronapps.brsc_diary.Models.PersonModel
 import com.nitronapps.brsc_diary.Models.ResultModel
 import com.nitronapps.brsc_diary.Models.TableModel
 import com.nitronapps.brsc_diary.Others.CustomTypefaceSpan
 import com.nitronapps.brsc_diary.Others.IBRSC
-
-import kotlinx.android.synthetic.main.activity_table.*
+import kotlinx.android.synthetic.main.activity_about.*
+import kotlinx.android.synthetic.main.activity_main.*
+import kotlinx.android.synthetic.main.activity_result.*
+import kotlinx.android.synthetic.main.app_bar_about.*
 import kotlinx.android.synthetic.main.app_bar_main.*
-import kotlinx.android.synthetic.main.app_bar_table.*
+import kotlinx.android.synthetic.main.app_bar_result.*
+import kotlinx.android.synthetic.main.content_result.*
 import kotlinx.android.synthetic.main.content_table.*
 import okhttp3.OkHttpClient
 import retrofit2.Call
@@ -42,18 +48,18 @@ import retrofit2.converter.gson.GsonConverterFactory
 import java.util.*
 import java.util.concurrent.TimeUnit
 
-class TableActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener {
-
+class ResultActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener {
     lateinit var mServerAPI: IBRSC
     lateinit var mSharedPreferences: SharedPreferences
 
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_table)
-        setSupportActionBar(toolbar)
+        setContentView(R.layout.activity_result)
+        setSupportActionBar(toolbarAbout)
 
-        swipeRefreshLayoutTable.setColorSchemeColors(Color.parseColor("#2980b9"), Color.parseColor("#e74c3c"), Color.parseColor("#f1c40f"), Color.parseColor("#2ecc71"))
-        swipeRefreshLayoutTable.isRefreshing = true
+        swipeRefreshLayoutResult.setColorSchemeColors(Color.parseColor("#2980b9"), Color.parseColor("#e74c3c"), Color.parseColor("#f1c40f"), Color.parseColor("#2ecc71"))
+        swipeRefreshLayoutResult.isRefreshing = true
 
         mSharedPreferences = getSharedPreferences(APP_SETTINGS, MODE_PRIVATE)
 
@@ -70,20 +76,20 @@ class TableActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelect
 
         mServerAPI = retrofit.create(IBRSC::class.java)
 
-        recyclerViewTable.layoutManager = LinearLayoutManager(this)
+        recyclerViewResult.layoutManager = LinearLayoutManager(this)
+
 
         initRecyclerView()
-
         setPerson()
 
         val toggle = ActionBarDrawerToggle(
-                this, drawer_layout_table, findViewById(R.id.toolbarTable), R.string.title_activity_login, R.string.title_activity_main2)
-        drawer_layout_table.addDrawerListener(toggle)
+                this, drawer_layoutResult, toolbarResult, R.string.navigation_drawer_open, R.string.navigation_drawer_close)
+        drawer_layoutResult.addDrawerListener(toggle)
         toggle.syncState()
 
-        navigation_viewTable.setNavigationItemSelectedListener(this)
+        nav_viewResult.setNavigationItemSelectedListener(this)
 
-        val menu = navigation_viewTable.menu
+        val menu = nav_viewResult.menu
 
         for(i in 0 until menu.size()){
             val menuItem = menu.getItem(i)
@@ -100,19 +106,21 @@ class TableActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelect
         }
     }
 
-    override fun onNavigationItemSelected(p0: MenuItem): Boolean {
-        when (p0.itemId) {
-            R.id.nav_diary -> {
-                val intent = Intent(this, MainActivity::class.java)
-                intent.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION)
-                startActivity(intent)
-            }
-            R.id.nav_results -> {
-                val intent = Intent(this, ResultActivity::class.java)
+
+    override fun onNavigationItemSelected(item: MenuItem): Boolean {
+        when (item.itemId) {
+            R.id.nav_table -> {
+                val intent = Intent(this, TableActivity::class.java)
                 intent.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION)
                 startActivity(intent)
             }
 
+            R.id.nav_results -> {
+                val intent = Intent(this, ResultActivity::class.java)
+                intent.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION)
+
+                startActivity(intent)
+            }
 
             R.id.nav_quit -> {
                 AlertDialog.Builder(this)
@@ -133,82 +141,19 @@ class TableActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelect
 
                 startActivity(intent)
             }
+
             else -> {
             }
         }
-
         return true
     }
 
-    fun initRecyclerView() {
-                if (mSharedPreferences.contains("saveTable")) {
-                    val list = Gson().fromJson<List<Lesson>>(mSharedPreferences.getString("saveTable", ""),
-                            object : TypeToken<List<Lesson>>() {}.type)
-
-                    recyclerViewTable.layoutManager = LinearLayoutManager(this)
-                    recyclerViewTable.adapter = TableAdapter(list)
-                    recyclerViewTable.addItemDecoration(MainActivity.SpacesItemDecoration(10))
-                } else
-                    mServerAPI.getTable(mSharedPreferences.getString("login", ""),
-                            mSharedPreferences.getString("password", ""),
-                            mSharedPreferences.getString("id", "")).enqueue(
-                            object : Callback<Array<TableModel>> {
-                                override fun onFailure(call: Call<Array<TableModel>>, t: Throwable) {
-                                    Toast.makeText(applicationContext, resources.getString(R.string.error_connection), Toast.LENGTH_LONG).show()
-                                }
-
-                                override fun onResponse(call: Call<Array<TableModel>>, response: Response<Array<TableModel>>) {
-                                        val list = LinkedList<Lesson>()
-
-                                        for (i in response.body()!!.iterator())
-                                            list.add(i.getLesson())
-
-                                        list.add(Lesson("", LinkedList<TableMarks>()))
-
-                                        val adapter = TableAdapter(list)
-                                        recyclerViewTable.adapter = adapter
-                                        recyclerViewTable.addItemDecoration(MainActivity.SpacesItemDecoration(5))
-                                        Log.w("table", "success")
-
-                                        swipeRefreshLayoutTable.isRefreshing = false
-
-                                }
-                            }
-                    )
-
-                swipeRefreshLayoutTable.setOnRefreshListener {
-                    mServerAPI.getTable(mSharedPreferences.getString("login", ""),
-                            mSharedPreferences.getString("password", ""),
-                            mSharedPreferences.getString("id", "")).enqueue(
-                            object : Callback<Array<TableModel>> {
-                                override fun onFailure(call: Call<Array<TableModel>>, t: Throwable) {
-                                    Toast.makeText(applicationContext, resources.getString(R.string.error_connection), Toast.LENGTH_LONG).show()
-                                }
-
-                                override fun onResponse(call: Call<Array<TableModel>>, response: Response<Array<TableModel>>) {
-                                        val list = LinkedList<Lesson>()
-
-                                        for (i in response.body()!!.iterator())
-                                            list.add(i.getLesson())
-
-                                        val adapter = TableAdapter(list)
-                                        recyclerViewTable.adapter = adapter
-                                        recyclerViewTable.addItemDecoration(MainActivity.SpacesItemDecoration(5))
-                                        Log.w("table", "success")
-
-                                        swipeRefreshLayoutTable.isRefreshing = false
-
-                                }
-                            }
-                    )
-                }
-            }
 
     fun setPerson() {
         if (mSharedPreferences.contains("wasLogin") || mSharedPreferences.getBoolean("wasLogin", false)) {
             if (mSharedPreferences.contains("wasPersonGot") && mSharedPreferences.getBoolean("wasPersonGot", false)) {
-                navigation_viewTable.removeHeaderView(navigation_viewTable.getHeaderView(0))
-                val view = navigation_viewTable.inflateHeaderView(R.layout.nav_header)
+                nav_viewResult.removeHeaderView(nav_viewResult.getHeaderView(0))
+                val view = nav_viewResult.inflateHeaderView(R.layout.nav_header)
                 val imageView = view.findViewById<ImageView>(R.id.imageViewPerson)
                 val name = view.findViewById<TextView>(R.id.textViewName)
 
@@ -222,12 +167,12 @@ class TableActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelect
                         mSharedPreferences.getString("id", "test")).enqueue(
                         object : Callback<PersonModel> {
                             override fun onFailure(call: Call<PersonModel>, t: Throwable) {
-                                Log.w("getName", t.message)
+                                Toast.makeText(applicationContext, resources.getString(R.string.error_connection), Toast.LENGTH_LONG).show()
                             }
 
                             override fun onResponse(call: Call<PersonModel>, response: Response<PersonModel>) {
-                                navigation_viewTable.removeHeaderView(navigation_viewTable.getHeaderView(0))
-                                val view = navigation_viewTable.inflateHeaderView(R.layout.nav_header)
+                                navigation_view.removeHeaderView(navigation_view.getHeaderView(0))
+                                val view = navigation_view.inflateHeaderView(R.layout.nav_header)
                                 val imageView = view.findViewById<ImageView>(R.id.imageViewPerson)
                                 val name = view.findViewById<TextView>(R.id.textViewName)
 
@@ -246,15 +191,63 @@ class TableActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelect
         }
     }
 
-    fun deleteAccount(){
-        mSharedPreferences.edit().clear().apply()
-        startActivity(Intent(this, LoginActivity::class.java))
-    }
-
     fun applyFontToMenuItem(mi: MenuItem){
         val font = Typeface.createFromAsset(assets, "segoe_ui_light.ttf")
         val mNewName = SpannableString(mi.title)
         mNewName.setSpan(CustomTypefaceSpan("", font), 0, mNewName.length, Spannable.SPAN_INCLUSIVE_INCLUSIVE)
         mi.title = mNewName
+    }
+
+    fun initRecyclerView() {
+            mServerAPI.getResults(mSharedPreferences.getString("login", ""),
+                    mSharedPreferences.getString("password", ""),
+                    mSharedPreferences.getString("id", "")).enqueue(
+                    object : Callback<Array<ResultModel>> {
+                        override fun onFailure(call: Call<Array<ResultModel>>, t: Throwable) {
+                            Log.w("table", t.message)
+                        }
+
+                        override fun onResponse(call: Call<Array<ResultModel>>, response: Response<Array<ResultModel>>) {
+
+                                mSharedPreferences.edit().putString("saveResults", Gson().toJson(response.body())).apply()
+
+                                val adapter = ResultsAdapter(response.body()!!)
+                                recyclerViewResult.adapter = adapter
+                                recyclerViewResult.addItemDecoration(MainActivity.SpacesItemDecoration(5))
+                                Log.w("table", "success")
+
+                                swipeRefreshLayoutResult.isRefreshing = false
+                            }
+                        }
+            )
+
+        swipeRefreshLayoutResult.setOnRefreshListener {
+            mServerAPI.getResults(mSharedPreferences.getString("login", ""),
+                    mSharedPreferences.getString("password", ""),
+                    mSharedPreferences.getString("id", "")).enqueue(
+                    object : Callback<Array<ResultModel>> {
+                        override fun onFailure(call: Call<Array<ResultModel>>, t: Throwable) {
+                            Toast.makeText(applicationContext, resources.getString(R.string.error_connection), Toast.LENGTH_LONG).show()
+                        }
+
+                        override fun onResponse(call: Call<Array<ResultModel>>, response: Response<Array<ResultModel>>) {
+
+                            mSharedPreferences.edit().putString("saveResults", Gson().toJson(response.body())).apply()
+
+                            val adapter = ResultsAdapter(response.body()!!)
+                            recyclerViewResult.adapter = adapter
+                            recyclerViewResult.addItemDecoration(MainActivity.SpacesItemDecoration(5))
+                            Log.w("table", "success")
+
+                            swipeRefreshLayoutResult.isRefreshing = false
+                        }
+                    }
+            )
+        }
+}
+
+    fun deleteAccount(){
+        mSharedPreferences.edit().clear().apply()
+        startActivity(Intent(this, LoginActivity::class.java))
     }
 }

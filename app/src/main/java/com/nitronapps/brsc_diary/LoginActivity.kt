@@ -7,6 +7,7 @@ import android.view.View
 import android.content.Context
 import android.content.Intent
 import android.util.Log
+import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
 import com.nitronapps.brsc_diary.Others.IBRSC
 
@@ -43,9 +44,14 @@ class LoginActivity : AppCompatActivity() {
 
         val sp = getSharedPreferences(APP_SETTINGS, Context.MODE_PRIVATE)
 
+
+
         buttonLogIn.setOnClickListener {
             progressBarLogIn.visibility = View.VISIBLE
             buttonLogIn.visibility = View.INVISIBLE
+
+            if (getCurrentFocus() != null)
+                (getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager).hideSoftInputFromWindow(currentFocus.getWindowToken(), InputMethodManager.HIDE_NOT_ALWAYS)
 
             serverApi.getId(editTexlLogin.text.toString(), editTextPassword.text.toString()).enqueue(
                     object : Callback<String> {
@@ -65,7 +71,7 @@ class LoginActivity : AppCompatActivity() {
 
                                 startActivity(Intent(applicationContext, MainActivity::class.java))
                             } else
-                                Toast.makeText(applicationContext, "ERR", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(applicationContext, resources.getString(R.string.error_login), Toast.LENGTH_SHORT).show()
 
                             progressBarLogIn.visibility = View.INVISIBLE
                             buttonLogIn.visibility = View.VISIBLE
