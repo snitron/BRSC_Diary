@@ -1,0 +1,42 @@
+{
+  "project_info": {
+    "project_number": "449023242099",
+    "firebase_url": "https://diary-3c7a5.firebaseio.com",
+    "project_id": "diary-3c7a5",
+    "storage_bucket": "diary-3c7a5.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:449023242099:android:fd0d7ca991322f3b",
+        "android_client_info": {
+          "package_name": "com.nitronapps.brsc_diary"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "449023242099-qf1nec5jihq48v2lstkumukq7it79n32.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBCOU5asO8elirw1zNJB9dWiW1PxwvMCxo"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 1,
+          "other_platform_oauth_client": []
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

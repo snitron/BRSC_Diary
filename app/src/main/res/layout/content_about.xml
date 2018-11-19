@@ -17,7 +17,7 @@
         android:layout_marginEnd="8dp"
         android:fontFamily="@font/segoe_ui_light"
         android:text="@string/about_desc"
-        android:textAlignment="center"
+        android:gravity="center"
         android:textColor="#000"
         android:textSize="24sp"
         android:textStyle="bold"
