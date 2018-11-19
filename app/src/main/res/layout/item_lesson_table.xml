@@ -2,7 +2,7 @@
 <android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    android:background="@drawable/pretty_border_blue"
+    android:background="@color/colorPrimary"
     android:layout_width="match_parent"
     android:layout_height="wrap_content">
 
@@ -15,7 +15,7 @@
         android:layout_marginBottom="8dp"
         android:fontFamily="@font/segoe_ui_light"
         android:text="Алгебра"
-        android:textColor="#000"
+        android:textColor="#FFF"
         android:textSize="30sp"
         android:textStyle="bold"
         app:layout_constraintBottom_toBottomOf="parent"

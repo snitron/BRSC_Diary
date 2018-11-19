@@ -15,15 +15,14 @@
         <item name="android:fontFamily">@font/segoe_ui_light</item>
     </style>
 
-    <style name="AppTheme.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar" >
+    <style name="AppTheme.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar">
         <item name="android:fontFamily">@font/segoe_ui_light</item>
     </style>
 
 
     <style name="AppTheme.PopupOverlay" parent="ThemeOverlay.AppCompat.Light">
-    <item name="android:fontFamily">@font/segoe_ui_light</item>
-</style>
+        <item name="android:fontFamily">@font/segoe_ui_light</item>
+    </style>
 
 
-
-    </resources>
+</resources>

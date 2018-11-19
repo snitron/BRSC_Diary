@@ -1,30 +1,54 @@
 package com.nitronapps.brsc_diary.Adapters
 
+import android.support.v7.widget.RecyclerView
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
-import com.nitronapps.brsc_diary.Data.Results
-import com.nitronapps.brsc_diary.Data.ResultsMarks
+import android.widget.TextView
+import com.nitronapps.brsc_diary.Models.ResultModel
 import com.nitronapps.brsc_diary.R
-import com.thoughtbot.expandablerecyclerview.ExpandableRecyclerViewAdapter
-import com.thoughtbot.expandablerecyclerview.models.ExpandableGroup
 
-class ResultsAdapter(groups: List<ExpandableGroup<*>>) : ExpandableRecyclerViewAdapter<LessonHolder, ResultsMarksHolder>(groups) {
-    override fun onCreateGroupViewHolder(parent: ViewGroup?, viewType: Int): LessonHolder {
-        val view = LayoutInflater.from(parent?.context).inflate(R.layout.item_lesson_table, parent, false)
-        return LessonHolder(view)
+class ResultsAdapter(val data: Array<ResultModel>) : RecyclerView.Adapter<ResultsAdapter.ResultsViewHolder>() {
+    override fun onCreateViewHolder(p0: ViewGroup, p1: Int): ResultsViewHolder {
+        val view = LayoutInflater.from(p0.context).inflate(R.layout.item_results, p0, false)
+        return ResultsViewHolder(view)
     }
 
-    override fun onCreateChildViewHolder(parent: ViewGroup?, viewType: Int): ResultsMarksHolder {
-        val view = LayoutInflater.from(parent?.context).inflate(R.layout.item_results, parent, false)
-        return ResultsMarksHolder(view)
+    override fun getItemCount(): Int {
+        return data.size
     }
 
-    override fun onBindChildViewHolder(holder: ResultsMarksHolder?, flatPosition: Int, group: ExpandableGroup<*>?, childIndex: Int) {
-        val item = group?.items?.get(childIndex) as ResultsMarks
-        holder?.onBind(item)
+    override fun onBindViewHolder(p0: ResultsViewHolder, p1: Int) {
+        p0.lesson.text = data[p1].lesson
+        p0.m1.text = data[p1].m1
+        p0.m2.text = data[p1].m2
+
+        if(!data[p1].isHalfYear)
+            p0.m3.text = data[p1].m3
+            p0.m4.text = data[p1].m4
+
+
+        p0.y.text = data[p1].y
+        p0.res.text = data[p1].res
     }
 
-    override fun onBindGroupViewHolder(holder: LessonHolder?, flatPosition: Int, group: ExpandableGroup<*>?) {
-        holder?.setTitle(group!!)
+    class ResultsViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        val lesson: TextView
+        val m1: TextView
+        val m2: TextView
+        val m3: TextView
+        val m4: TextView
+        val y: TextView
+        val res: TextView
+
+        init {
+            lesson = itemView.findViewById(R.id.textViewLessonResult)
+            m1 = itemView.findViewById(R.id.textViewFirst)
+            m2 = itemView.findViewById(R.id.textViewSecond)
+            m3 = itemView.findViewById(R.id.textViewThird)
+            m4 = itemView.findViewById(R.id.textViewFour)
+            y = itemView.findViewById(R.id.textViewY)
+            res = itemView.findViewById(R.id.textViewRes)
+        }
     }
 }
