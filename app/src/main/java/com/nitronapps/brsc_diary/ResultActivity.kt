@@ -26,6 +26,7 @@ import com.google.gson.reflect.TypeToken
 import com.nitronapps.brsc_diary.Adapters.ResultsAdapter
 import com.nitronapps.brsc_diary.Adapters.TableAdapter
 import com.nitronapps.brsc_diary.Data.APP_SETTINGS
+import com.nitronapps.brsc_diary.Data.APP_VERSION
 import com.nitronapps.brsc_diary.Data.Lesson
 import com.nitronapps.brsc_diary.Data.SERVER_ADRESS
 import com.nitronapps.brsc_diary.Models.NameModel
@@ -39,6 +40,7 @@ import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.activity_main.view.*
 import kotlinx.android.synthetic.main.activity_result.*
 import kotlinx.android.synthetic.main.activity_result.view.*
+import kotlinx.android.synthetic.main.activity_table.*
 import kotlinx.android.synthetic.main.app_bar_about.*
 import kotlinx.android.synthetic.main.app_bar_main.*
 import kotlinx.android.synthetic.main.app_bar_result.*
@@ -60,9 +62,11 @@ import java.util.concurrent.TimeUnit
 class ResultActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener {
     private lateinit var mSharedPreferences: SharedPreferences
     private lateinit var mServerAPI: IBRSC
+    private var user: NameModel? = null
     private var prefId = 0
     private val arrayListType: Type = object : TypeToken<ArrayList<String>>() {}.type
-
+    private val callListNames = ArrayList<Call<NameModel>>()
+    private val callListResult = ArrayList<Call<Array<ResultModel>>>()
     private var login = ""
     private var password = ""
     private lateinit var ids: ArrayList<String>
@@ -93,7 +97,15 @@ class ResultActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelec
 
         count = mSharedPreferences.getInt("count", 0)
 
-
+        if (isParent) {
+            nav_viewResult.menu.clear()
+            nav_viewResult.inflateMenu(R.menu.menu_parent)
+            nav_viewResult.textViewParentNameResult.visibility = View.VISIBLE
+        } else {
+            nav_viewResult.menu.clear()
+            nav_viewResult.inflateMenu(R.menu.menu_student)
+            nav_viewResult.textViewParentNameResult.visibility = View.GONE
+        }
 
         val okhttp = OkHttpClient.Builder()
                 .connectTimeout(100, TimeUnit.SECONDS)
@@ -181,6 +193,26 @@ class ResultActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelec
                 startActivity(intent)
             }
 
+            if (isParent) R.id.nav_children else -1 -> {
+                if (user != null) {
+                    AlertDialog.Builder(this)
+                            .setTitle("Выберите аккаунт:")
+                            .setItems(user!!.child_ids, { dialog, which ->
+                                val name = Gson().fromJson(
+                                        mSharedPreferences.getString("name", "[]"),
+                                        NameModel::class.java
+                                )
+                                drawer_layoutResult.closeDrawers()
+                                prefId = which
+                                mSharedPreferences.edit().putInt("prefId", which).apply()
+                                setPersonName(name?.child_ids!![prefId])
+                                recyclerViewResult.adapter = null
+                                initRecyclerView()
+                            }).create().show()
+                } else
+                    Toast.makeText(this, resources.getString(R.string.loading), Toast.LENGTH_LONG).show()
+            }
+
             else -> {
             }
         }
@@ -201,21 +233,30 @@ class ResultActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelec
         else
             curId = ids[0]
 
-        mServerAPI.getResults(login,
+        val curPrefId = prefId
+
+        callListResult.add(mServerAPI.getResults(login,
                         password,
-                        curId).enqueue(
+                        curId))
+        callListResult.last().enqueue(
                 object : Callback<Array<ResultModel>> {
                     override fun onFailure(call: Call<Array<ResultModel>>, t: Throwable) {
                         Toast.makeText(applicationContext, resources.getString(R.string.error_connection), Toast.LENGTH_LONG).show()
                     }
 
                     override fun onResponse(call: Call<Array<ResultModel>>, response: Response<Array<ResultModel>>) {
-                        if (response.body() != null) {
-                            mSharedPreferences.edit().putString("saveResults", Gson().toJson(response.body())).apply()
+                        swipeRefreshLayoutResult.isRefreshing = false
 
-                            val adapter = ResultsAdapter(response.body()!!)
-                            recyclerViewResult.adapter = adapter
-                            recyclerViewResult.addItemDecoration(MainActivity.SpacesItemDecoration(5))
+                        if (response.body() != null) {
+                            if(curPrefId == prefId) {
+                                mSharedPreferences.edit().putString("saveResults", Gson().toJson(response.body())).apply()
+
+                                val adapter = ResultsAdapter(response.body()!!)
+                                recyclerViewResult.adapter = adapter
+                                recyclerViewResult.addItemDecoration(MainActivity.SpacesItemDecoration(5))
+                            } else
+                                swipeRefreshLayoutResult.isRefreshing = true
+
                         } else
                             Toast.makeText(applicationContext, resources.getString(R.string.error_connection), Toast.LENGTH_LONG).show()
 
@@ -231,9 +272,10 @@ class ResultActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelec
             else
                 curId = ids[0]
 
-            mServerAPI.getResults(login,
+            callListResult.add(mServerAPI.getResults(login,
                                 password,
-                                curId).enqueue(
+                                curId))
+            callListResult.last().enqueue(
                     object : Callback<Array<ResultModel>> {
                         override fun onFailure(call: Call<Array<ResultModel>>, t: Throwable) {
                             Toast.makeText(applicationContext, resources.getString(R.string.error_connection), Toast.LENGTH_LONG).show()
@@ -258,13 +300,15 @@ class ResultActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelec
 
     fun getNames() {
         if (isParent) {
-            mServerAPI.getName(
-                    login,
-                    password,
-                    mSharedPreferences.getString("ids", "[]"),
-                    "test",
-                    "multiply"
-            ).enqueue(
+            callListNames.add(
+                    mServerAPI.getName(
+                            login,
+                            password,
+                            mSharedPreferences.getString("ids", "[]"),
+                            APP_VERSION,
+                            "multiply"
+                    ))
+            callListNames.last().enqueue(
                     object : Callback<NameModel> {
                         override fun onFailure(call: Call<NameModel>, t: Throwable) {
 
@@ -277,14 +321,15 @@ class ResultActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelec
                     }
             )
         } else {
-
-            mServerAPI.getName(
-                    login,
-                    password,
-                    ids[0],
-                    "test",
-                    "one"
-            ).enqueue(
+            callListNames.add(
+                    mServerAPI.getName(
+                            login,
+                            password,
+                            ids[0],
+                            APP_VERSION,
+                            "one"
+                    ))
+            callListNames.last().enqueue(
                     object : Callback<NameModel> {
                         override fun onFailure(call: Call<NameModel>, t: Throwable) {
 
@@ -305,34 +350,18 @@ class ResultActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelec
             val header = nav_viewResult.inflateHeaderView(R.layout.nav_header)
 
             val textViewName = header.textViewName
-            val buttonChange = header.textViewChangeAccount
             val parentName = nav_viewResult.textViewParentNameResult
 
-            val user = Gson().fromJson(
+            user = Gson().fromJson(
                     if (mSharedPreferences.contains("name")) mSharedPreferences.getString("name", "[]") else "[]",
                     NameModel::class.java
             )
 
             if (isParent) {
-                textViewName.text = user.child_ids!![prefId].replace("\"", "")
-                buttonChange.setOnClickListener {
-                    AlertDialog.Builder(this)
-                            .setTitle("Выберите аккаунт:")
-                            .setItems(user.child_ids, { dialog, which ->
-                                drawer_layoutResult.closeDrawers()
-                                prefId = which
-                                textViewName.text = user.child_ids[prefId].replace("\"", "")
-                                mSharedPreferences.edit().putInt("prefId", which).apply()
-                                recyclerViewResult.adapter = null
-                                initRecyclerView()
-                            }).create().show()
-
-                }
-                buttonChange.paintFlags = Paint.UNDERLINE_TEXT_FLAG
-                parentName.text = "Родитель: " + prepareParentName(user.name!!)
+                textViewName.text = user?.child_ids!![prefId].replace("\"", "")
+                parentName.text = resources.getString(R.string.parent_name)  + " " +  prepareParentName(user?.name!!)
             } else {
-                textViewName.text = user.name!!.replace("\"", "")
-                buttonChange.visibility = View.GONE
+                textViewName.text = user?.name!!.replace("\"", "")
                 parentName.visibility = View.GONE
             }
         }
@@ -340,6 +369,15 @@ class ResultActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelec
 
     fun deleteAccount() {
         mSharedPreferences.edit().clear().apply()
+
+        for(i in callListResult.iterator())
+            if(!i.isCanceled && i.isExecuted)
+                i.cancel()
+
+        for(i in callListNames.iterator())
+            if(!i.isCanceled && i.isExecuted)
+                i.cancel()
+
         val intent = Intent(this, LoginActivity::class.java)
         intent.putExtra("type", "first")
 
@@ -355,5 +393,12 @@ class ResultActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelec
             }
 
         return name.substring(0, length)
+    }
+
+    fun setPersonName(name: String) {
+        navigation_viewTable.removeHeaderView(navigation_viewTable.getHeaderView(0))
+        val header = navigation_viewTable.inflateHeaderView(R.layout.nav_header)
+
+        header.textViewName.text = name.replace("\"", "")
     }
 }

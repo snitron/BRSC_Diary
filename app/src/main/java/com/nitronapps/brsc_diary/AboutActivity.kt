@@ -24,6 +24,7 @@ import android.widget.Toast
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.nitronapps.brsc_diary.Data.APP_SETTINGS
+import com.nitronapps.brsc_diary.Data.APP_VERSION
 import com.nitronapps.brsc_diary.Data.SERVER_ADRESS
 import com.nitronapps.brsc_diary.Models.NameModel
 import com.nitronapps.brsc_diary.Models.PersonModel
@@ -35,6 +36,7 @@ import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.activity_result.*
 import kotlinx.android.synthetic.main.activity_result.view.*
 import kotlinx.android.synthetic.main.app_bar_about.*
+import kotlinx.android.synthetic.main.content_main.*
 import kotlinx.android.synthetic.main.content_result.*
 import kotlinx.android.synthetic.main.nav_header.view.*
 import okhttp3.ConnectionSpec
@@ -54,7 +56,8 @@ class AboutActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelect
     private lateinit var mServerAPI: IBRSC
     private var prefId = 0
     private val arrayListType: Type = object : TypeToken<ArrayList<String>>() {}.type
-
+    private val callListNames = ArrayList<Call<NameModel>>()
+    private var user: NameModel? = null
     private var login = ""
     private var password = ""
     private lateinit var ids: ArrayList<String>
@@ -101,6 +104,17 @@ class AboutActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelect
                 .build()
 
         mServerAPI = retrofit.create(IBRSC::class.java)
+
+
+        if (isParent) {
+            nav_view.menu.clear()
+            nav_view.inflateMenu(R.menu.menu_parent)
+            nav_view.textViewParentNameAbout.visibility = View.VISIBLE
+        } else {
+            nav_view.menu.clear()
+            nav_view.inflateMenu(R.menu.menu_student)
+            nav_view.textViewParentNameAbout.visibility = View.GONE
+        }
 
         if(!mSharedPreferences.contains("name"))
             getNames()
@@ -156,6 +170,25 @@ class AboutActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelect
 
             R.id.nav_about -> drawer_layoutAbout.closeDrawers()
 
+
+            if (isParent) R.id.nav_children else -1 -> {
+                if (user != null) {
+                    AlertDialog.Builder(this)
+                            .setTitle("Выберите аккаунт:")
+                            .setItems(user!!.child_ids, { dialog, which ->
+                                val name = Gson().fromJson(
+                                        mSharedPreferences.getString("name", "[]"),
+                                        NameModel::class.java
+                                )
+                                drawer_layout.closeDrawers()
+                                prefId = which
+                                mSharedPreferences.edit().putInt("prefId", which).apply()
+                                setPersonName(name?.child_ids!![prefId])
+                            }).create().show()
+                } else
+                    Toast.makeText(this, resources.getString(R.string.loading), Toast.LENGTH_LONG).show()
+            }
+
             else -> {
             }
         }
@@ -166,6 +199,11 @@ class AboutActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelect
 
     fun deleteAccount() {
         mSharedPreferences.edit().clear().apply()
+
+        for (i in callListNames.iterator())
+            if(!i.isCanceled && i.isExecuted)
+                i.cancel()
+
         val intent = Intent(this, LoginActivity::class.java)
         intent.putExtra("type", "first")
 
@@ -182,13 +220,15 @@ class AboutActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelect
 
     fun getNames() {
         if (isParent) {
-            mServerAPI.getName(
-                    login,
-                    password,
-                    mSharedPreferences.getString("ids", "[]"),
-                    "test",
-                    "multiply"
-            ).enqueue(
+            callListNames.add(
+                    mServerAPI.getName(
+                            login,
+                            password,
+                            mSharedPreferences.getString("ids", "[]"),
+                            APP_VERSION,
+                            "multiply"
+                    ))
+            callListNames.last().enqueue(
                     object : Callback<NameModel> {
                         override fun onFailure(call: Call<NameModel>, t: Throwable) {
 
@@ -201,14 +241,15 @@ class AboutActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelect
                     }
             )
         } else {
-
-            mServerAPI.getName(
-                    login,
-                    password,
-                    ids[0],
-                    "test",
-                    "one"
-            ).enqueue(
+            callListNames.add(
+                    mServerAPI.getName(
+                            login,
+                            password,
+                            ids[0],
+                            APP_VERSION,
+                            "one"
+                    ))
+            callListNames.last().enqueue(
                     object : Callback<NameModel> {
                         override fun onFailure(call: Call<NameModel>, t: Throwable) {
 
@@ -229,32 +270,19 @@ class AboutActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelect
             val header = nav_view.inflateHeaderView(R.layout.nav_header)
 
             val textViewName = header.textViewName
-            val buttonChange = header.textViewChangeAccount
             val parentName = nav_view.textViewParentNameAbout
 
-            val user = Gson().fromJson(
+            user = Gson().fromJson(
                     if (mSharedPreferences.contains("name")) mSharedPreferences.getString("name", "[]") else "[]",
                     NameModel::class.java
             )
 
             if (isParent) {
-                textViewName.text = user.child_ids!![prefId].replace("\"", "")
-                buttonChange.setOnClickListener {
-                    AlertDialog.Builder(this)
-                            .setTitle("Выберите аккаунт:")
-                            .setItems(user.child_ids, { dialog, which ->
-                                drawer_layoutAbout.closeDrawers()
-                                prefId = which
-                                textViewName.text = user.child_ids[prefId].replace("\"", "")
-                                mSharedPreferences.edit().putInt("prefId", which).apply()
-                            }).create().show()
+                textViewName.text = user?.child_ids!![prefId].replace("\"", "")
 
-                }
-                buttonChange.paintFlags = Paint.UNDERLINE_TEXT_FLAG
-                parentName.text = "Родитель: " + prepareParentName(user.name!!)
+                parentName.text = resources.getString(R.string.parent_name)  + " " +  prepareParentName(user?.name!!)
             } else {
-                textViewName.text = user.name!!.replace("\"", "")
-                buttonChange.visibility = View.GONE
+                textViewName.text = user?.name!!.replace("\"", "")
                 parentName.visibility = View.GONE
             }
         }
@@ -270,6 +298,14 @@ class AboutActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelect
 
        return name.substring(0, length)
    }
+
+
+    fun setPersonName(name: String) {
+        nav_view.removeHeaderView(nav_view.getHeaderView(0))
+        val header = nav_view.inflateHeaderView(R.layout.nav_header)
+
+        header.textViewName.text = name.replace("\"", "")
+    }
 
 }
 

@@ -42,16 +42,4 @@
         app:layout_constraintStart_toEndOf="@+id/imageViewPerson"
         app:layout_constraintTop_toTopOf="@+id/imageViewPerson" />
 
-    <TextView
-        android:id="@+id/textViewChangeAccount"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:text="@string/changeParent"
-        android:textColor="@color/colorPrimary"
-        android:textStyle="bold"
-        app:layout_constraintBottom_toBottomOf="@+id/imageViewPerson"
-        app:layout_constraintStart_toStartOf="@+id/textViewName"
-        app:layout_constraintTop_toBottomOf="@+id/textViewName" />
-
 </android.support.constraint.ConstraintLayout>

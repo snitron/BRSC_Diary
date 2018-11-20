@@ -34,8 +34,6 @@ import kotlin.collections.ArrayList
 
 class LoginActivity : AppCompatActivity() {
     val APP_SETTINGS = "account"
-    private val arrayListType: Type = object : TypeToken<ArrayList<String>>() {}.type
-
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -43,11 +41,6 @@ class LoginActivity : AppCompatActivity() {
 
 
         val mSharedPreferences = getSharedPreferences(APP_SETTINGS, Context.MODE_PRIVATE)
-
-        mSharedPreferences.registerOnSharedPreferenceChangeListener { sharedPreferences, key ->
-            Log.w("sharedPreferences edit", key)
-        }
-
 
         val okhttp = OkHttpClient.Builder()
                 .connectTimeout(100, TimeUnit.SECONDS)
@@ -87,7 +80,6 @@ class LoginActivity : AppCompatActivity() {
                                         mSharedPreferences.edit().putString("ids", Gson().toJson(response.body()!!.child_ids!!)).apply()
                                         mSharedPreferences.edit().putString("parentId", response.body()!!.parent_id.toString()).apply()
                                         mSharedPreferences.edit().putBoolean("isParent", true).apply()
-                                        mSharedPreferences.edit().putInt("count", response.body()!!.child_ids!!.size).apply()
                                         mSharedPreferences.edit().putInt("prefId", 0).apply()
                                     } else {
                                         val arrayListIds = ArrayList<String>()

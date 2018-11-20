@@ -20,8 +20,8 @@
     <string name="lesson">ПРЕДМЕТ</string>
     <string name="hw">ЗАДАНИЕ</string>
     <string name="mark">ОЦЕНКА</string>
-    <string name="one">I</string>
-    <string name="two">II</string>
+    <string name="one">  I</string>
+    <string name="two"> II</string>
     <string name="three">III</string>
     <string name="four">IV</string>
     <string name="year">Г</string>
@@ -32,8 +32,8 @@
     <string name="accept_2">Вы действительно хотите выйти из аккаунта?</string>
     <string name="yes">Да</string>
     <string name="no">Нет</string>
-    <string name="about_desc">Мобильное приложение для электронного дневника\n\n Разработчик: Nitron Apps\n nitronapps@yandex.ru\n\n Версия 1.1\n2018</string>
-    <string name="version">Версия 1.1\nNitron Apps. 2018</string>
+    <string name="about_desc">Мобильное приложение для электронного дневника\n\n Разработчик: Nitron Apps\n nitronapps@yandex.ru\n\n Версия 1.1\n2018 г.</string>
+    <string name="version">Версия 1.1\nNitron Apps. 2018 г.</string>
     <string name="hello">Добро пожаловать!\n Введите логин и пароль:</string>
     <string name="login">ВОЙТИ</string>
     <string name="prev">\u0020\u0020ПРЕДЫДУЩАЯ НЕДЕЛЯ\u0020\u0020</string>
@@ -42,8 +42,7 @@
     <string name="password_hint">Password</string>
     <string name="student">Ученик</string>
     <string name="parent">Родитель</string>
-    <string name="parent_name">Родитель: </string>
-    <string name="changeParent">Ваши дети:</string>
+    <string name="parent_name">Родитель:</string>
     <string name="changeUser">Ваши аккаунты</string>
 
     <string name="error_connection">Ошибка соединения. Повторите снова.</string>

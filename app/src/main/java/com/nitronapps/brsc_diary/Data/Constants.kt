@@ -1,6 +1,6 @@
 package com.nitronapps.brsc_diary.Data
 
-const val SERVER_ADRESS = "https://brsc-diary-test.herokuapp.com/web/"
+const val SERVER_ADRESS = "https://brsc-diary-server.herokuapp.com/web/"
 const val APP_SETTINGS = "account"
 const val RED_BCK = "#f2dede"
 const val RED_TXT= "#a94442"
@@ -11,4 +11,4 @@ const val BLUE_TXT = "#31708f"
 const val GREEN_BCK = "#dff0d8"
 const val GREEN_TXT = "#3c763d"
 const val GREY_BCK = "#F5F5F5"
-const val APP_VERSION = "1.0.4_pre_alpha"
+const val APP_VERSION = "1.1"

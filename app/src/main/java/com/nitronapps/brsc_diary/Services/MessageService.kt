@@ -15,9 +15,6 @@ import com.nitronapps.brsc_diary.R
 
 class MessageService: FirebaseMessagingService(){
     val channelId = "fcm_default_channel"
-    override fun onNewToken(p0: String?) {
-        super.onNewToken(p0)
-    }
 
     override fun onMessageReceived(p0: RemoteMessage?) {
         super.onMessageReceived(p0)
@@ -31,7 +28,7 @@ class MessageService: FirebaseMessagingService(){
 
         val defaultSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
 
-        val notificationBuilder = NotificationCompat.Builder(this)
+        val notificationBuilder = NotificationCompat.Builder(this, channelId)
                 .setSmallIcon(R.mipmap.ic_launcher)
                 .setContentTitle("Дневник")
                 .setContentText(messageBody)

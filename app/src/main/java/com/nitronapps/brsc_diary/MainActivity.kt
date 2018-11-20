@@ -26,6 +26,7 @@ import com.google.gson.GsonBuilder
 import com.google.gson.reflect.TypeToken
 import com.nitronapps.brsc_diary.Adapters.DayAdapter
 import com.nitronapps.brsc_diary.Data.APP_SETTINGS
+import com.nitronapps.brsc_diary.Data.APP_VERSION
 import com.nitronapps.brsc_diary.Data.SERVER_ADRESS
 import com.nitronapps.brsc_diary.Models.DayModel
 import com.nitronapps.brsc_diary.Models.NameModel
@@ -54,14 +55,15 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     private lateinit var mSharedPreferences: SharedPreferences
     private lateinit var mServerAPI: IBRSC
     private lateinit var mOkHttpClient: OkHttpClient
+    private var user: NameModel? = null
     private var prefId = 0
     private val arrayListType: Type = object : TypeToken<ArrayList<String>>() {}.type
-
+    private val callListNames = ArrayList<Call<NameModel>>()
+    private val callListDiary = ArrayList<Call<Array<DayModel>>>()
     private var login = ""
     private var password = ""
     private lateinit var ids: ArrayList<String>
     private var isParent = false
-    private var count = 0
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -71,6 +73,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         mSharedPreferences = getSharedPreferences(APP_SETTINGS, MODE_PRIVATE)
 
         if (!mSharedPreferences.contains("wasLogin") || !mSharedPreferences.getBoolean("wasLogin", false)) {
+            mSharedPreferences.edit().clear().apply()
             val intent = Intent(this, LoginActivity::class.java)
             intent.putExtra("type", "first")
             startActivity(intent)
@@ -85,6 +88,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         mSharedPreferences.edit().putInt("curWeek", GregorianCalendar().get(GregorianCalendar.WEEK_OF_YEAR)).apply()
 
         isParent = mSharedPreferences.getBoolean("isParent", false)
+
         prefId = mSharedPreferences.getInt("prefId", 0)
 
         login = mSharedPreferences.getString("login", "")!!
@@ -94,10 +98,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         ids = Gson().fromJson<ArrayList<String>>(
                 mSharedPreferences.getString("ids", "[]"),
                 arrayListType
-           )
-
-        count = mSharedPreferences.getInt("count", 0)
-
+        )
 
         mOkHttpClient = OkHttpClient.Builder()
                 .connectTimeout(100, TimeUnit.SECONDS)
@@ -121,6 +122,16 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         swipeRefreshLayout.isRefreshing = true
         swipeRefreshLayout.setDistanceToTriggerSync(20)
 
+        if (isParent) {
+            navigation_view.menu.clear()
+            navigation_view.inflateMenu(R.menu.menu_parent)
+            navigation_view.textViewParentNameMain.visibility = View.VISIBLE
+        } else {
+            navigation_view.menu.clear()
+            navigation_view.inflateMenu(R.menu.menu_student)
+            navigation_view.textViewParentNameMain.visibility = View.GONE
+        }
+
 
         swipeRefreshLayout.setOnRefreshListener {
             initRecyclerView()
@@ -128,25 +139,24 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
         recyclerView.addItemDecoration(SpacesItemDecoration(10))
 
-        if (mSharedPreferences.contains("wasLogin") || mSharedPreferences.getBoolean("wasLogin", false))
+        if (mSharedPreferences.contains("wasLogin") || mSharedPreferences.getBoolean("wasLogin", false)) {
             initRecyclerView()
 
-
-        if (!mSharedPreferences.contains("name"))
-            getNames()
-        else
-            setPerson()
-
+            if (!mSharedPreferences.contains("name"))
+                getNames()
+            else
+                setPerson()
+        }
         buttonNext.setOnClickListener {
             var curId = ""
-            if(isParent)
+            if (isParent)
                 curId = ids[prefId]
             else
                 curId = ids[0]
 
             swipeRefreshLayout.isRefreshing = true
 
-            mServerAPI.getDiary(
+            callListDiary.add(mServerAPI.getDiary(
                     login,
                     password,
                     if ((mSharedPreferences.getInt("curWeek", 1) + 1).toDouble() in 35.0..52.0 ||
@@ -155,42 +165,44 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                     else
                         "1",
                     curId
-            )
-                    .enqueue(object : retrofit2.Callback<Array<DayModel>> {
-                        override fun onFailure(call: Call<Array<DayModel>>, t: Throwable) {
-                            Toast.makeText(applicationContext, resources.getString(R.string.error_connection), Toast.LENGTH_SHORT).show()
-                            swipeRefreshLayout.isRefreshing = false
-                            Log.w("mainError", t.message)
-                        }
+            ))
 
-                        override fun onResponse(call: Call<Array<DayModel>>, response: Response<Array<DayModel>>) {
-                            swipeRefreshLayout.isRefreshing = false
+            callListDiary.last().enqueue(object : retrofit2.Callback<Array<DayModel>> {
+                override fun onFailure(call: Call<Array<DayModel>>, t: Throwable) {
+                    Toast.makeText(applicationContext, resources.getString(R.string.error_connection), Toast.LENGTH_SHORT).show()
+                    swipeRefreshLayout.isRefreshing = false
+                    Log.w("mainError", t.message)
+                }
 
-                            Log.w("mainSucces", Gson().toJson(response.body()))
-                            if (response.isSuccessful && response.body() != null) {
-                                recyclerView.adapter = DayAdapter(response.body()!!, applicationContext)
-                                recyclerView.layoutManager = LinearLayoutManager(applicationContext)
-                                if ((mSharedPreferences.getInt("curWeek", 1) + 1).toDouble() !in 35.0..52.0 &&
-                                        (mSharedPreferences.getInt("curWeek", 1) + 1).toDouble() !in 1.0..22.0)
-                                    mSharedPreferences.edit().putInt("curWeek", mSharedPreferences.getInt("curWeek", 0) + 1).apply()
-                            } else
-                                Toast.makeText(applicationContext, resources.getString(R.string.error_connection), Toast.LENGTH_SHORT).show()
+                override fun onResponse(call: Call<Array<DayModel>>, response: Response<Array<DayModel>>) {
+                    swipeRefreshLayout.isRefreshing = false
 
-                        }
+                    Log.w("mainSucces", Gson().toJson(response.body()))
+                    if (response.isSuccessful && response.body() != null) {
+                        recyclerView.adapter = DayAdapter(response.body()!!, applicationContext)
+                        recyclerView.layoutManager = LinearLayoutManager(applicationContext)
+                        if ((mSharedPreferences.getInt("curWeek", 1) + 1).toDouble() in 35.0..52.0 ||
+                                (mSharedPreferences.getInt("curWeek", 1) + 1).toDouble() in 1.0..22.0)
+                            mSharedPreferences.edit().putInt("curWeek", mSharedPreferences.getInt("curWeek", 0) + 1).apply()
+                    } else
+                        Toast.makeText(applicationContext, resources.getString(R.string.error_connection), Toast.LENGTH_SHORT).show()
 
-                    })
+                }
+
+            })
+
         }
 
         buttonPrev.setOnClickListener {
             var curId = ""
-            if(isParent)
+            if (isParent)
                 curId = ids[prefId]
             else
                 curId = ids[0]
 
             swipeRefreshLayout.isRefreshing = true
 
-            mServerAPI.getDiary(
+            callListDiary.add(mServerAPI.getDiary(
                     login,
                     password,
                     if ((mSharedPreferences.getInt("curWeek", 1) - 1).toDouble() in 35.0..52.0 ||
@@ -199,30 +211,31 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                     else
                         "1",
                     curId
-            )
-                    .enqueue(object : retrofit2.Callback<Array<DayModel>> {
-                        override fun onFailure(call: Call<Array<DayModel>>, t: Throwable) {
-                            Toast.makeText(applicationContext, resources.getString(R.string.error_connection), Toast.LENGTH_SHORT).show()
-                            swipeRefreshLayout.isRefreshing = false
-                            Log.w("mainError", t.message)
-                        }
+            ))
 
-                        override fun onResponse(call: Call<Array<DayModel>>, response: Response<Array<DayModel>>) {
-                            swipeRefreshLayout.isRefreshing = false
+            callListDiary.last().enqueue(object : retrofit2.Callback<Array<DayModel>> {
+                override fun onFailure(call: Call<Array<DayModel>>, t: Throwable) {
+                    Toast.makeText(applicationContext, resources.getString(R.string.error_connection), Toast.LENGTH_SHORT).show()
+                    swipeRefreshLayout.isRefreshing = false
+                    Log.w("mainError", t.message)
+                }
 
-                            Log.w("mainSucces", Gson().toJson(response.body()))
-                            if (response.isSuccessful && response.body() != null) {
-                                recyclerView.adapter = DayAdapter(response.body()!!, applicationContext)
-                                recyclerView.layoutManager = LinearLayoutManager(applicationContext)
+                override fun onResponse(call: Call<Array<DayModel>>, response: Response<Array<DayModel>>) {
+                    swipeRefreshLayout.isRefreshing = false
 
-                                if ((mSharedPreferences.getInt("curWeek", 1) + 1).toDouble() !in 35.0..52.0 &&
-                                        (mSharedPreferences.getInt("curWeek", 1) + 1).toDouble() !in 1.0..22.0)
-                                    mSharedPreferences.edit().putInt("curWeek", mSharedPreferences.getInt("curWeek", 0) - 1).apply()
-                            } else
-                                Toast.makeText(applicationContext, resources.getString(R.string.error_connection), Toast.LENGTH_SHORT).show()
-                        }
+                    Log.w("mainSucces", Gson().toJson(response.body()))
+                    if (response.isSuccessful && response.body() != null) {
+                        recyclerView.adapter = DayAdapter(response.body()!!, applicationContext)
+                        recyclerView.layoutManager = LinearLayoutManager(applicationContext)
 
-                    })
+                        if ((mSharedPreferences.getInt("curWeek", 1) - 1).toDouble() in 35.0..52.0 ||
+                                (mSharedPreferences.getInt("curWeek", 1) - 1).toDouble() in 1.0..22.0)
+                            mSharedPreferences.edit().putInt("curWeek", mSharedPreferences.getInt("curWeek", 0) - 1).apply()
+                    } else
+                        Toast.makeText(applicationContext, resources.getString(R.string.error_connection), Toast.LENGTH_SHORT).show()
+                }
+
+            })
         }
 
         val drawer = findViewById<DrawerLayout>(R.id.drawer_layout)
@@ -284,11 +297,38 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 startActivity(intent)
             }
 
+            if (isParent) R.id.nav_children else -1 -> {
+                if (user != null) {
+                    AlertDialog.Builder(this)
+                            .setTitle("Выберите аккаунт:")
+                            .setItems(user!!.child_ids, { dialog, which ->
+                                val name = Gson().fromJson(
+                                        mSharedPreferences.getString("name", "[]"),
+                                        NameModel::class.java
+                                )
+                                drawer_layout.closeDrawers()
+                                prefId = which
+                                mSharedPreferences.edit().putInt("prefId", which).apply()
+                                setPersonName(name?.child_ids!![prefId])
+                                recyclerView.adapter = null
+                                initRecyclerView()
+                            }).create().show()
+                } else
+                    Toast.makeText(this, resources.getString(R.string.loading), Toast.LENGTH_LONG).show()
+            }
 
             else -> {
             }
         }
         return true
+    }
+
+
+    fun setPersonName(name: String) {
+        navigation_view.removeHeaderView(navigation_view.getHeaderView(0))
+        val header = navigation_view.inflateHeaderView(R.layout.nav_header)
+
+        header.textViewName.text = name.replace("\"", "")
     }
 
     fun setPerson() {
@@ -297,35 +337,19 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             val header = navigation_view.inflateHeaderView(R.layout.nav_header)
 
             val textViewName = header.textViewName
-            val buttonChange = header.textViewChangeAccount
             val parentName = navigation_view.textViewParentNameMain
 
-            val user = Gson().fromJson(
+            user = Gson().fromJson(
                     if (mSharedPreferences.contains("name")) mSharedPreferences.getString("name", "[]") else "[]",
                     NameModel::class.java
             )
 
             if (isParent) {
-                textViewName.text = user.child_ids!![prefId].replace("\"", "")
-                buttonChange.setOnClickListener {
-                    AlertDialog.Builder(this)
-                            .setTitle("Выберите аккаунт:")
-                            .setItems(user.child_ids, { dialog, which ->
-                                drawer_layout.closeDrawers()
-                                prefId = which
-                                textViewName.text = user.child_ids[prefId].replace("\"", "")
-                                mSharedPreferences.edit().putInt("prefId", which).apply()
-                                recyclerView.adapter = null
-                                initRecyclerView()
-                            }).create().show()
-
-                }
-                buttonChange.paintFlags = Paint.UNDERLINE_TEXT_FLAG
-                parentName.text = "Родитель: " + prepareParentName(user.name!!)
+                textViewName.text = user?.child_ids!![prefId].replace("\"", "")
+                parentName.text = resources.getString(R.string.parent_name) + " " + prepareParentName(user?.name!!)
             } else {
-               textViewName.text = user.name!!.replace("\"", "")
-               buttonChange.visibility = View.GONE
-               parentName.visibility = View.GONE
+                textViewName.text = user?.name!!.replace("\"", "")
+                parentName.visibility = View.GONE
             }
         }
     }
@@ -340,6 +364,15 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     fun deleteAccount() {
         mSharedPreferences.edit().clear().apply()
         recyclerView.adapter = null
+
+        for (i in callListDiary.iterator())
+            if (!i.isCanceled && i.isExecuted)
+                i.cancel()
+
+        for (i in callListNames.iterator())
+            if (!i.isCanceled && i.isExecuted)
+                i.cancel()
+
         val intent = Intent(this, LoginActivity::class.java)
         intent.putExtra("type", "first")
 
@@ -355,13 +388,15 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
     fun getNames() {
         if (isParent) {
-            mServerAPI.getName(
-                    login,
-                    password,
-                    mSharedPreferences.getString("ids", "[]"),
-                    "test",
-                    "multiply"
-            ).enqueue(
+            callListNames.add(
+                    mServerAPI.getName(
+                            login,
+                            password,
+                            mSharedPreferences.getString("ids", "[]"),
+                            APP_VERSION,
+                            "multiply"
+                    ))
+            callListNames.last().enqueue(
                     object : Callback<NameModel> {
                         override fun onFailure(call: Call<NameModel>, t: Throwable) {
 
@@ -374,14 +409,15 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                     }
             )
         } else {
-
-            mServerAPI.getName(
-                    login,
-                    password,
-                    ids[0],
-                    "test",
-                    "one"
-            ).enqueue(
+            callListNames.add(
+                    mServerAPI.getName(
+                            login,
+                            password,
+                            ids[0],
+                            APP_VERSION,
+                            "one"
+                    ))
+            callListNames.last().enqueue(
                     object : Callback<NameModel> {
                         override fun onFailure(call: Call<NameModel>, t: Throwable) {
 
@@ -399,54 +435,52 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
     fun initRecyclerView() {
         var curId = ""
-        if(isParent)
+        if (isParent)
             curId = ids[prefId]
         else
             curId = ids[0]
 
+        val curPrefId = prefId
+
         swipeRefreshLayout.isRefreshing = true
 
-        mServerAPI.getDiary(
-                login,
-                password,
-                mSharedPreferences.getInt("curWeek", 1).toString(),
-                curId
-        )
-                .enqueue(object : retrofit2.Callback<Array<DayModel>> {
-                    override fun onFailure(call: Call<Array<DayModel>>, t: Throwable) {
-                        Toast.makeText(applicationContext, resources.getString(R.string.error_connection), Toast.LENGTH_SHORT).show()
-                        swipeRefreshLayout.isRefreshing = false
-                        Log.w("mainError", t.message)
-                    }
+        callListDiary.add(
+                mServerAPI.getDiary(
+                        login,
+                        password,
+                        mSharedPreferences.getInt("curWeek", 1).toString(),
+                        curId
+                ))
+        callListDiary.last().enqueue(object : retrofit2.Callback<Array<DayModel>> {
+            override fun onFailure(call: Call<Array<DayModel>>, t: Throwable) {
+                Toast.makeText(applicationContext, resources.getString(R.string.error_connection), Toast.LENGTH_SHORT).show()
+                swipeRefreshLayout.isRefreshing = false
+                Log.w("mainError", t.message)
+            }
 
-                    override fun onResponse(call: Call<Array<DayModel>>, response: Response<Array<DayModel>>) {
+            override fun onResponse(call: Call<Array<DayModel>>, response: Response<Array<DayModel>>) {
 
-                        swipeRefreshLayout.isRefreshing = false
+                swipeRefreshLayout.isRefreshing = false
 
-                        Log.w("mainSucces", Gson().toJson(response.body()))
-                        if (response.body() != null) {
-                            recyclerView.adapter = DayAdapter(response.body()!!, applicationContext)
-                            recyclerView.layoutManager = LinearLayoutManager(applicationContext)
+                Log.w("mainSucces", Gson().toJson(response.body()))
+                if (response.body() != null) {
+                    if (curPrefId == prefId) {
+                        recyclerView.adapter = DayAdapter(response.body()!!, applicationContext)
+                        recyclerView.layoutManager = LinearLayoutManager(applicationContext)
 
-                            if ((mSharedPreferences.getInt("curWeek", 1) + 1).toDouble() !in 35.0..52.0 &&
-                                    (mSharedPreferences.getInt("curWeek", 1) + 1).toDouble() !in 1.0..22.0)
-                                mSharedPreferences.edit().putString("saved", Gson().toJson(response.body())).apply()
-                        } else
-                            Toast.makeText(applicationContext, resources.getString(R.string.error_connection), Toast.LENGTH_SHORT).show()
-                    }
+                        mSharedPreferences.edit().putString("saved", Gson().toJson(response.body())).apply()
+                    } else
+                        runOnUiThread {
+                            swipeRefreshLayout.isRefreshing = true
+                        }
+                } else
+                    Toast.makeText(applicationContext, resources.getString(R.string.error_connection), Toast.LENGTH_SHORT).show()
+            }
 
-                })
+        })
     }
 
-    fun printHeaders(headers: Headers): String {
-        var result = String()
-        for (i in 0 until headers.size())
-            result += headers.name(i) + " " + headers.value(i) + "\n"
-
-        return result
-    }
-
-    fun prepareParentName(name: String):String{
+    fun prepareParentName(name: String): String {
         var length = 0
         loop@ for (i in name.iterator())
             when (i) {
