@@ -88,7 +88,7 @@ class LoginActivity : AppCompatActivity() {
                                         mSharedPreferences.edit().putBoolean("isParent", false).apply()
                                     }
                                     mSharedPreferences.edit().putBoolean("wasLogin", true).apply()
-
+                                    mSharedPreferences.edit().putString("version", APP_VERSION).apply()
                                     mSharedPreferences.edit().putString("login", editTextLogin.text.toString()).apply()
                                     mSharedPreferences.edit().putString("password", editTextPassword.text.toString()).apply()
                                     startActivity(Intent(applicationContext, MainActivity::class.java))

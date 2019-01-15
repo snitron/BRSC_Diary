@@ -72,7 +72,9 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
         mSharedPreferences = getSharedPreferences(APP_SETTINGS, MODE_PRIVATE)
 
-        if (!mSharedPreferences.contains("wasLogin") || !mSharedPreferences.getBoolean("wasLogin", false)) {
+        if (!mSharedPreferences.contains("wasLogin") || !mSharedPreferences.getBoolean("wasLogin", false)
+                || !mSharedPreferences.contains("version") || !mSharedPreferences.getString("version","").equals(APP_VERSION)
+        ) {
             mSharedPreferences.edit().clear().apply()
             val intent = Intent(this, LoginActivity::class.java)
             intent.putExtra("type", "first")
@@ -491,6 +493,9 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         return name.substring(0, length)
     }
 
+    override fun onBackPressed(){
+
+    }
     class SpacesItemDecoration(private val space: Int) : RecyclerView.ItemDecoration() {
 
         override fun getItemOffsets(outRect: Rect, view: View, parent: RecyclerView, state: RecyclerView.State) {
