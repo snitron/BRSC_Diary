@@ -21,7 +21,7 @@
         android:layout_marginEnd="8dp"
         android:fontFamily="@font/segoe_ui_light"
         android:text="@string/hello"
-        android:textAlignment="center"
+        android:gravity="center"
         android:textColor="#000"
         android:textSize="30sp"
         android:textStyle="bold"
@@ -30,7 +30,7 @@
         app:layout_constraintTop_toTopOf="parent" />
 
     <EditText
-        android:id="@+id/editTexlLogin"
+        android:id="@+id/editTextLogin"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="8dp"
@@ -38,7 +38,7 @@
         android:layout_marginEnd="8dp"
         android:ems="10"
         android:fontFamily="@font/segoe_ui_light"
-        android:hint="Login"
+        android:hint="@string/login_hint"
         android:backgroundTint="@color/colorPrimary"
         android:inputType="textPersonName"
         android:textStyle="bold"
@@ -55,13 +55,13 @@
         android:layout_marginEnd="8dp"
         android:ems="10"
         android:fontFamily="@font/segoe_ui_light"
-        android:hint="Password"
+        android:hint="@string/password_hint"
         android:backgroundTint="@color/colorPrimary"
         android:inputType="textPassword"
         android:textStyle="bold"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/editTexlLogin" />
+        app:layout_constraintTop_toBottomOf="@+id/editTextLogin" />
 
     <Button
         android:id="@+id/buttonLogIn"
@@ -103,8 +103,8 @@
         android:layout_marginEnd="8dp"
         android:layout_marginBottom="8dp"
         android:fontFamily="@font/segoe_ui_light"
-        android:text="Версия 1.0\nNitron Apps. 2018"
-        android:textAlignment="center"
+        android:text="@string/version"
+        android:gravity="center"
         android:textColor="#000"
         android:textStyle="bold"
         app:layout_constraintBottom_toBottomOf="parent"

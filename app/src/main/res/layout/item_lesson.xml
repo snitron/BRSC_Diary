@@ -40,7 +40,9 @@
                 android:textSize="25sp"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
+                app:layout_constraintTop_toTopOf="parent"
+                android:layout_alignParentLeft="true"
+                android:layout_marginLeft="4dp" />
 
             <TextView
                 android:id="@+id/textViewLesson"
@@ -62,7 +64,9 @@
                 app:layout_constraintEnd_toStartOf="@+id/textViewMark"
                 app:layout_constraintHorizontal_bias="0.0"
                 app:layout_constraintStart_toEndOf="@+id/textViewNumber"
-                app:layout_constraintTop_toTopOf="parent" />
+                app:layout_constraintTop_toTopOf="parent"
+                android:layout_marginLeft="8dp"
+                android:layout_toRightOf="@+id/textViewNumber" />
 
             <TextView
                 android:id="@+id/textViewHomework"
@@ -70,12 +74,15 @@
                 android:layout_height="wrap_content"
                 android:layout_alignParentTop="true"
                 android:layout_alignParentEnd="true"
+                android:layout_alignParentRight="true"
                 android:layout_alignParentBottom="true"
                 android:layout_marginStart="8dp"
                 android:layout_marginTop="8dp"
-                android:layout_marginEnd="8dp"
+                android:layout_marginEnd="12dp"
+                android:layout_marginRight="12dp"
                 android:layout_marginBottom="8dp"
                 android:layout_toEndOf="@+id/textViewLesson"
+                android:layout_toRightOf="@+id/textViewLesson"
                 android:fontFamily="@font/segoe_ui_light"
                 android:gravity="center"
                 android:text="TextView"
@@ -107,7 +114,9 @@
                 android:textStyle="bold"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
+                app:layout_constraintTop_toTopOf="parent"
+                android:layout_alignParentRight="true"
+                android:layout_marginRight="1dp" />
 
         </android.support.constraint.ConstraintLayout>
 

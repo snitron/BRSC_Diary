@@ -142,7 +142,7 @@ import com.nitronapps.brsc_diary.R
                 length = string.indexOf("Файлы, прикрепленные учителем") - 1
             }
         }
-        return string.substring(0, length)
+        return if (length <= string.length && length > 0) string.substring(0, length) else ""
     }
 
 

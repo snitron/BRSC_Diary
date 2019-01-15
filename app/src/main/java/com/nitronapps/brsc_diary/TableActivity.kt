@@ -3,6 +3,7 @@ package com.nitronapps.brsc_diary
 import android.content.Intent
 import android.content.SharedPreferences
 import android.graphics.Color
+import android.graphics.Paint
 import android.graphics.Typeface
 import android.os.Bundle
 import android.support.constraint.ConstraintSet
@@ -15,6 +16,7 @@ import android.text.Spannable
 import android.text.SpannableString
 import android.util.Log
 import android.view.MenuItem
+import android.view.View
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
@@ -23,29 +25,47 @@ import com.google.gson.reflect.TypeToken
 import com.nitronapps.brsc_diary.Adapters.ResultsAdapter
 import com.nitronapps.brsc_diary.Adapters.TableAdapter
 import com.nitronapps.brsc_diary.Data.*
-import com.nitronapps.brsc_diary.Models.PersonModel
-import com.nitronapps.brsc_diary.Models.ResultModel
-import com.nitronapps.brsc_diary.Models.TableModel
+import com.nitronapps.brsc_diary.Models.*
 import com.nitronapps.brsc_diary.Others.CustomTypefaceSpan
 import com.nitronapps.brsc_diary.Others.IBRSC
+import kotlinx.android.synthetic.main.activity_main.*
+import kotlinx.android.synthetic.main.activity_main.view.*
 
 import kotlinx.android.synthetic.main.activity_table.*
+import kotlinx.android.synthetic.main.activity_table.view.*
 import kotlinx.android.synthetic.main.app_bar_main.*
 import kotlinx.android.synthetic.main.app_bar_table.*
+import kotlinx.android.synthetic.main.content_main.*
+import kotlinx.android.synthetic.main.content_result.*
 import kotlinx.android.synthetic.main.content_table.*
+import kotlinx.android.synthetic.main.nav_header.view.*
+import okhttp3.ConnectionSpec
 import okhttp3.OkHttpClient
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import java.lang.reflect.Type
 import java.util.*
 import java.util.concurrent.TimeUnit
 
 class TableActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener {
 
-    lateinit var mServerAPI: IBRSC
-    lateinit var mSharedPreferences: SharedPreferences
+    private lateinit var mSharedPreferences: SharedPreferences
+    private lateinit var mServerAPI: IBRSC
+    private lateinit var mOkHttpClient: OkHttpClient
+    private var user: NameModel? = null
+    private var prefId = 0
+    private val arrayListType: Type = object : TypeToken<ArrayList<String>>() {}.type
+    private val callListNames = ArrayList<Call<NameModel>>()
+    private val callListTable = ArrayList<Call<Array<TableModel>>>()
+    private var login = ""
+    private var password = ""
+    private lateinit var ids: ArrayList<String>
+    private var isParent = false
+    private var count = 0
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -57,9 +77,34 @@ class TableActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelect
 
         mSharedPreferences = getSharedPreferences(APP_SETTINGS, MODE_PRIVATE)
 
+        isParent = mSharedPreferences.getBoolean("isParent", false)
+        prefId = mSharedPreferences.getInt("prefId", 0)
+
+        login = mSharedPreferences.getString("login", "")!!
+
+        password = mSharedPreferences.getString("password", "")!!
+
+        ids = Gson().fromJson<ArrayList<String>>(
+                mSharedPreferences.getString("ids", "[]"),
+                arrayListType
+        )
+
+        count = mSharedPreferences.getInt("count", 0)
+
+        if (isParent) {
+            navigation_viewTable.menu.clear()
+            navigation_viewTable.inflateMenu(R.menu.menu_parent)
+            navigation_viewTable.textViewParentNameTable.visibility = View.VISIBLE
+        } else {
+            navigation_viewTable.menu.clear()
+            navigation_viewTable.inflateMenu(R.menu.menu_student)
+            navigation_viewTable.textViewParentNameTable.visibility = View.GONE
+        }
+
         val okhttp = OkHttpClient.Builder()
                 .connectTimeout(100, TimeUnit.SECONDS)
                 .readTimeout(100, TimeUnit.SECONDS)
+                .connectionSpecs(Arrays.asList(ConnectionSpec.MODERN_TLS, ConnectionSpec.COMPATIBLE_TLS))
                 .build()
 
         val retrofit = Retrofit.Builder()
@@ -74,7 +119,10 @@ class TableActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelect
 
         initRecyclerView()
 
-        setPerson()
+        if (!mSharedPreferences.contains("name"))
+            getNames()
+        else
+            setPerson()
 
         val toggle = ActionBarDrawerToggle(
                 this, drawer_layout_table, findViewById(R.id.toolbarTable), R.string.title_activity_login, R.string.title_activity_main2)
@@ -85,13 +133,13 @@ class TableActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelect
 
         val menu = navigation_viewTable.menu
 
-        for(i in 0 until menu.size()){
+        for (i in 0 until menu.size()) {
             val menuItem = menu.getItem(i)
 
             val subMenu = menuItem.subMenu
 
-            if(subMenu != null && subMenu.size() != 0)
-                for(j in 0 until subMenu.size()){
+            if (subMenu != null && subMenu.size() != 0)
+                for (j in 0 until subMenu.size()) {
                     val subItem = subMenu.getItem(i)
                     applyFontToMenuItem(subItem)
                 }
@@ -133,6 +181,28 @@ class TableActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelect
 
                 startActivity(intent)
             }
+
+            R.id.nav_table -> drawer_layout_table.closeDrawers()
+
+            if (isParent) R.id.nav_children else -1 -> {
+                if (user != null) {
+                    AlertDialog.Builder(this)
+                            .setTitle("Выберите аккаунт:")
+                            .setItems(user!!.child_ids, { dialog, which ->
+                                val name = Gson().fromJson(
+                                        mSharedPreferences.getString("name", "[]"),
+                                        NameModel::class.java
+                                )
+                                drawer_layout_table.closeDrawers()
+                                prefId = which
+                                mSharedPreferences.edit().putInt("prefId", which).apply()
+                                setPersonName(name?.child_ids!![prefId])
+                                recyclerViewTable.adapter = null
+                                initRecyclerView()
+                            }).create().show()
+                } else
+                    Toast.makeText(this, resources.getString(R.string.loading), Toast.LENGTH_LONG).show()
+            }
             else -> {
             }
         }
@@ -140,121 +210,207 @@ class TableActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelect
         return true
     }
 
-    fun initRecyclerView() {
-                if (mSharedPreferences.contains("saveTable")) {
-                    val list = Gson().fromJson<List<Lesson>>(mSharedPreferences.getString("saveTable", ""),
-                            object : TypeToken<List<Lesson>>() {}.type)
+    fun getNames() {
+        if (isParent) {
+            callListNames.add(
+                    mServerAPI.getName(
+                            login,
+                            password,
+                            mSharedPreferences.getString("ids", "[]"),
+                            APP_VERSION,
+                            "multiply"
+                    ))
+            callListNames.last().enqueue(
+                    object : Callback<NameModel> {
+                        override fun onFailure(call: Call<NameModel>, t: Throwable) {
 
-                    recyclerViewTable.layoutManager = LinearLayoutManager(this)
-                    recyclerViewTable.adapter = TableAdapter(list)
-                    recyclerViewTable.addItemDecoration(MainActivity.SpacesItemDecoration(10))
-                } else
-                    mServerAPI.getTable(mSharedPreferences.getString("login", ""),
-                            mSharedPreferences.getString("password", ""),
-                            mSharedPreferences.getString("id", "")).enqueue(
-                            object : Callback<Array<TableModel>> {
-                                override fun onFailure(call: Call<Array<TableModel>>, t: Throwable) {
-                                    Toast.makeText(applicationContext, resources.getString(R.string.error_connection), Toast.LENGTH_LONG).show()
-                                }
-
-                                override fun onResponse(call: Call<Array<TableModel>>, response: Response<Array<TableModel>>) {
-                                        val list = LinkedList<Lesson>()
-
-                                        for (i in response.body()!!.iterator())
-                                            list.add(i.getLesson())
-
-                                        list.add(Lesson("", LinkedList<TableMarks>()))
-
-                                        val adapter = TableAdapter(list)
-                                        recyclerViewTable.adapter = adapter
-                                        recyclerViewTable.addItemDecoration(MainActivity.SpacesItemDecoration(5))
-                                        Log.w("table", "success")
-
-                                        swipeRefreshLayoutTable.isRefreshing = false
-
-                                }
-                            }
-                    )
-
-                swipeRefreshLayoutTable.setOnRefreshListener {
-                    mServerAPI.getTable(mSharedPreferences.getString("login", ""),
-                            mSharedPreferences.getString("password", ""),
-                            mSharedPreferences.getString("id", "")).enqueue(
-                            object : Callback<Array<TableModel>> {
-                                override fun onFailure(call: Call<Array<TableModel>>, t: Throwable) {
-                                    Toast.makeText(applicationContext, resources.getString(R.string.error_connection), Toast.LENGTH_LONG).show()
-                                }
-
-                                override fun onResponse(call: Call<Array<TableModel>>, response: Response<Array<TableModel>>) {
-                                        val list = LinkedList<Lesson>()
-
-                                        for (i in response.body()!!.iterator())
-                                            list.add(i.getLesson())
-
-                                        val adapter = TableAdapter(list)
-                                        recyclerViewTable.adapter = adapter
-                                        recyclerViewTable.addItemDecoration(MainActivity.SpacesItemDecoration(5))
-                                        Log.w("table", "success")
-
-                                        swipeRefreshLayoutTable.isRefreshing = false
-
-                                }
-                            }
-                    )
-                }
-            }
-
-    fun setPerson() {
-        if (mSharedPreferences.contains("wasLogin") || mSharedPreferences.getBoolean("wasLogin", false)) {
-            if (mSharedPreferences.contains("wasPersonGot") && mSharedPreferences.getBoolean("wasPersonGot", false)) {
-                navigation_viewTable.removeHeaderView(navigation_viewTable.getHeaderView(0))
-                val view = navigation_viewTable.inflateHeaderView(R.layout.nav_header)
-                val imageView = view.findViewById<ImageView>(R.id.imageViewPerson)
-                val name = view.findViewById<TextView>(R.id.textViewName)
-
-                val person = Gson().fromJson(mSharedPreferences.getString("person", "[]"), PersonModel::class.java)
-
-                imageView.setImageBitmap(person.decodeImage())
-                name.text = person.name
-            } else
-                mServerAPI.getName(mSharedPreferences.getString("login", ""),
-                        mSharedPreferences.getString("password", ""),
-                        mSharedPreferences.getString("id", "test")).enqueue(
-                        object : Callback<PersonModel> {
-                            override fun onFailure(call: Call<PersonModel>, t: Throwable) {
-                                Log.w("getName", t.message)
-                            }
-
-                            override fun onResponse(call: Call<PersonModel>, response: Response<PersonModel>) {
-                                navigation_viewTable.removeHeaderView(navigation_viewTable.getHeaderView(0))
-                                val view = navigation_viewTable.inflateHeaderView(R.layout.nav_header)
-                                val imageView = view.findViewById<ImageView>(R.id.imageViewPerson)
-                                val name = view.findViewById<TextView>(R.id.textViewName)
-
-                                imageView.setImageBitmap(response.body()?.decodeImage())
-                                name.text = response.body()?.name?.trim()
-
-                                mSharedPreferences.edit().putBoolean("wasPersonGot", true).apply()
-                                mSharedPreferences.edit().putString("person", Gson().toJson(PersonModel(response.body()?.name?.trim()!!, response.body()?.img!!))).apply()
-
-                                Log.w("getName", "success")
-                                Log.w("getName", response.body()?.name!!.trim())
-                                Log.w("getName", response.body()?.img)
-                            }
                         }
-                )
+
+                        override fun onResponse(call: Call<NameModel>, response: Response<NameModel>) {
+                            mSharedPreferences.edit().putString("name", Gson().toJson(response.body())).apply()
+                            setPerson()
+                        }
+                    }
+            )
+        } else {
+            callListNames.add(
+                    mServerAPI.getName(
+                            login,
+                            password,
+                            ids[0],
+                            APP_VERSION,
+                            "one"
+                    ))
+            callListNames.last().enqueue(
+                    object : Callback<NameModel> {
+                        override fun onFailure(call: Call<NameModel>, t: Throwable) {
+
+                        }
+
+                        override fun onResponse(call: Call<NameModel>, response: Response<NameModel>) {
+                            mSharedPreferences.edit().putString("name", Gson().toJson(response.body())).apply()
+                            setPerson()
+                        }
+                    }
+            )
         }
     }
 
-    fun deleteAccount(){
-        mSharedPreferences.edit().clear().apply()
-        startActivity(Intent(this, LoginActivity::class.java))
+    fun setPerson() {
+        runOnUiThread {
+            navigation_viewTable.removeHeaderView(navigation_viewTable.getHeaderView(0))
+            val header = navigation_viewTable.inflateHeaderView(R.layout.nav_header)
+
+            val textViewName = header.textViewName
+
+            val parentName = navigation_viewTable.textViewParentNameTable
+
+            user = Gson().fromJson(
+                    if (mSharedPreferences.contains("name")) mSharedPreferences.getString("name", "[]") else "[]",
+                    NameModel::class.java
+            )
+
+            if (isParent) {
+                textViewName.text = user?.child_ids!![prefId].replace("\"", "")
+
+                parentName.text = resources.getString(R.string.parent_name)  + " " +  prepareParentName(user?.name!!)
+            } else {
+                textViewName.text = user?.name!!.replace("\"", "")
+                parentName.visibility = View.GONE
+            }
+        }
     }
 
-    fun applyFontToMenuItem(mi: MenuItem){
+    fun initRecyclerView() {
+
+        var curId = ""
+        if (isParent)
+            curId = ids[prefId]
+        else
+            curId = ids[0]
+
+
+        val curPrefId = prefId
+        swipeRefreshLayoutTable.isRefreshing = true
+
+
+        callListTable.add(mServerAPI.getTable(login,
+                password,
+                curId))
+        callListTable.last().enqueue(
+                object : Callback<Array<TableModel>> {
+                    override fun onFailure(call: Call<Array<TableModel>>, t: Throwable) {
+                        Toast.makeText(applicationContext, resources.getString(R.string.error_connection), Toast.LENGTH_LONG).show()
+                    }
+
+                    override fun onResponse(call: Call<Array<TableModel>>, response: Response<Array<TableModel>>) {
+                        swipeRefreshLayoutResult?.isRefreshing = false
+
+                        if (response.body() != null) {
+                            if (curPrefId == prefId) {
+                                val list = LinkedList<Lesson>()
+
+                                for (i in response.body()!!.iterator())
+                                    list.add(i.getLesson())
+
+                                list.add(Lesson("", LinkedList<TableMarks>()))
+
+                                val adapter = TableAdapter(list)
+                                recyclerViewTable.adapter = adapter
+                                recyclerViewTable.addItemDecoration(MainActivity.SpacesItemDecoration(5))
+                            } else
+                                swipeRefreshLayoutResult.isRefreshing = true
+
+                        } else
+                            Toast.makeText(applicationContext, resources.getString(R.string.error_connection), Toast.LENGTH_LONG).show()
+
+                        swipeRefreshLayoutTable.isRefreshing = false
+                    }
+                })
+
+
+        swipeRefreshLayoutTable.setOnRefreshListener {
+
+            if (isParent)
+                curId = ids[prefId]
+            else
+                curId = ids[0]
+
+            callListTable.add(mServerAPI.getTable(
+                    login,
+                    password,
+                    curId
+            ))
+            callListTable.last().enqueue(
+                    object : Callback<Array<TableModel>> {
+                        override fun onFailure(call: Call<Array<TableModel>>, t: Throwable) {
+                            Toast.makeText(applicationContext, resources.getString(R.string.error_connection), Toast.LENGTH_LONG).show()
+                        }
+
+                        override fun onResponse(call: Call<Array<TableModel>>, response: Response<Array<TableModel>>) {
+                            if (response.body() != null) {
+                                val list = LinkedList<Lesson>()
+
+                                for (i in response.body()!!.iterator())
+                                    list.add(i.getLesson())
+
+                                val adapter = TableAdapter(list)
+                                recyclerViewTable.adapter = adapter
+                                recyclerViewTable.addItemDecoration(MainActivity.SpacesItemDecoration(5))
+                                Log.w("table", "success")
+
+                                swipeRefreshLayoutTable.isRefreshing = false
+                            } else
+                                Toast.makeText(applicationContext, resources.getString(R.string.error_connection), Toast.LENGTH_LONG).show()
+
+                            swipeRefreshLayoutTable.isRefreshing = false
+                        }
+                    }
+            )
+        }
+    }
+
+    fun deleteAccount() {
+        mSharedPreferences.edit().clear().apply()
+
+        for(i in callListTable.iterator())
+            if(!i.isCanceled && i.isExecuted)
+                i.cancel()
+
+        for(i in callListNames.iterator())
+            if(!i.isCanceled && i.isExecuted)
+                i.cancel()
+
+
+        val intent = Intent(this, LoginActivity::class.java)
+        intent.putExtra("type", "first")
+
+        startActivity(intent)
+    }
+
+    fun applyFontToMenuItem(mi: MenuItem) {
         val font = Typeface.createFromAsset(assets, "segoe_ui_light.ttf")
         val mNewName = SpannableString(mi.title)
         mNewName.setSpan(CustomTypefaceSpan("", font), 0, mNewName.length, Spannable.SPAN_INCLUSIVE_INCLUSIVE)
         mi.title = mNewName
     }
+
+    fun prepareParentName(name: String): String {
+        var length = 0
+        loop@ for (i in name.iterator())
+            when (i) {
+                '1', '2', '3', '4', '5', '6', '7', '8', '9', '0' -> break@loop
+                else -> length++
+            }
+
+        return name.substring(0, length)
+    }
+
+    fun setPersonName(name: String) {
+        navigation_viewTable.removeHeaderView(navigation_viewTable.getHeaderView(0))
+        val header = navigation_viewTable.inflateHeaderView(R.layout.nav_header)
+
+        header.textViewName.text = name.replace("\"", "")
+    }
+
 }
