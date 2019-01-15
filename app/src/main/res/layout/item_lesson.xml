@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="90dp"
+    android:layout_height="wrap_content"
     android:orientation="horizontal">
 
     <android.support.v7.widget.CardView
@@ -25,7 +25,7 @@
             <TextView
                 android:id="@+id/textViewNumber"
                 android:layout_width="wrap_content"
-                android:layout_height="match_parent"
+                android:layout_height="wrap_content"
                 android:layout_alignParentStart="true"
                 android:layout_alignParentTop="true"
                 android:layout_alignParentBottom="true"
@@ -41,12 +41,13 @@
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintVertical_bias="0.0" />
+                android:layout_alignParentLeft="true"
+                android:layout_marginLeft="4dp" />
 
             <TextView
                 android:id="@+id/textViewLesson"
                 android:layout_width="120dp"
-                android:layout_height="match_parent"
+                android:layout_height="wrap_content"
                 android:layout_alignParentTop="true"
                 android:layout_alignParentBottom="true"
                 android:layout_marginStart="8dp"
@@ -55,7 +56,7 @@
                 android:layout_toEndOf="@+id/textViewNumber"
                 android:fontFamily="@font/segoe_ui_light"
                 android:gravity="center"
-                android:text="Иностранный язык (Английский язык)"
+                android:text="Иностранный язык (Английский)"
                 android:textColor="@android:color/black"
                 android:textSize="14sp"
                 android:textStyle="bold"
@@ -64,46 +65,49 @@
                 app:layout_constraintHorizontal_bias="0.0"
                 app:layout_constraintStart_toEndOf="@+id/textViewNumber"
                 app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintVertical_bias="0.0" />
+                android:layout_marginLeft="8dp"
+                android:layout_toRightOf="@+id/textViewNumber" />
 
             <TextView
                 android:id="@+id/textViewHomework"
                 android:layout_width="0dp"
-                android:layout_height="match_parent"
+                android:layout_height="wrap_content"
                 android:layout_alignParentTop="true"
                 android:layout_alignParentEnd="true"
+                android:layout_alignParentRight="true"
                 android:layout_alignParentBottom="true"
                 android:layout_marginStart="8dp"
                 android:layout_marginTop="8dp"
-                android:layout_marginEnd="8dp"
+                android:layout_marginEnd="12dp"
+                android:layout_marginRight="12dp"
                 android:layout_marginBottom="8dp"
                 android:layout_toEndOf="@+id/textViewLesson"
+                android:layout_toRightOf="@+id/textViewLesson"
                 android:fontFamily="@font/segoe_ui_light"
                 android:gravity="center"
                 android:text="TextView"
                 android:textColor="@android:color/black"
-                android:textSize="10dp"
+                android:textSize="12sp"
                 android:textStyle="bold"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toStartOf="@+id/textViewMark"
                 app:layout_constraintHorizontal_bias="0.0"
                 app:layout_constraintStart_toEndOf="@+id/textViewLesson"
-                app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintVertical_bias="0.0" />
+                app:layout_constraintTop_toTopOf="parent" />
 
             <TextView
                 android:id="@+id/textViewMark"
-                android:layout_width="40dp"
-                android:layout_height="match_parent"
+                android:layout_width="50dp"
+                android:layout_height="0dp"
                 android:layout_alignParentTop="true"
                 android:layout_alignParentEnd="true"
                 android:layout_alignParentBottom="true"
-                android:layout_marginTop="8dp"
-                android:layout_marginEnd="8dp"
-                android:layout_marginBottom="8dp"
+                android:layout_marginTop="1dp"
+                android:layout_marginEnd="1dp"
+                android:layout_marginBottom="1dp"
                 android:fontFamily="@font/segoe_ui_light"
                 android:gravity="center"
-                android:text="5/5"
+                android:text="5 5 (i)"
                 android:textAlignment="center"
                 android:textColor="@android:color/black"
                 android:textSize="18sp"
@@ -111,7 +115,8 @@
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintVertical_bias="0.0" />
+                android:layout_alignParentRight="true"
+                android:layout_marginRight="1dp" />
 
         </android.support.constraint.ConstraintLayout>
 

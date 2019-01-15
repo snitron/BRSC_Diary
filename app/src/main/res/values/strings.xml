@@ -2,23 +2,12 @@
     <string name="app_name">Дневник</string>
     <string name="title_activity_main2">Main2Activity</string>
     <string name="title_activity_login">Авторизация</string>
-    <!-- Strings related to login -->
-    <string name="prompt_email">Email</string>
-    <string name="prompt_password">Password (optional)</string>
-    <string name="action_sign_in">Sign in or register</string>
-    <string name="action_sign_in_short">Sign in</string>
-    <string name="error_invalid_email">This email address is invalid</string>
-    <string name="error_invalid_password">This password is too short</string>
-    <string name="error_incorrect_password">This password is incorrect</string>
-    <string name="error_field_required">This field is required</string>
-    <string name="permission_rationale">"Contacts permissions are needed for providing email
-        completions."
-    </string>
     <string name="title_activity_table">TableActivity</string>
     <string name="title_activity_results">ResultsActivity</string>
 
     <string name="table">Табель успеваемости</string>
     <string name="results">Итоги</string>
+    <string name="about">О приложении</string>
     <string name="title_activity_about">AboutActivity</string>
     <string name="navigation_drawer_open">Open navigation drawer</string>
     <string name="navigation_drawer_close">Close navigation drawer</string>
@@ -26,4 +15,37 @@
     <string name="nav_header_subtitle">android.studio@android.com</string>
     <string name="nav_header_desc">Navigation header</string>
     <string name="action_settings">Settings</string>
+    <string name="title_activity_result">ResultActivity</string>
+
+    <string name="lesson">ПРЕДМЕТ</string>
+    <string name="hw">ЗАДАНИЕ</string>
+    <string name="mark">ОЦЕНКА</string>
+    <string name="one">  I</string>
+    <string name="two"> II</string>
+    <string name="three">III</string>
+    <string name="four">IV</string>
+    <string name="year">Г</string>
+    <string name="res">И</string>
+
+    <string name="loading">Загрузка…</string>
+    <string name="accept">Подтвердите действие</string>
+    <string name="accept_2">Вы действительно хотите выйти из аккаунта?</string>
+    <string name="yes">Да</string>
+    <string name="no">Нет</string>
+    <string name="about_desc">Мобильное приложение для электронного дневника\n\n Разработчик: Nitron Apps\n nitronapps@yandex.ru\n\n Версия 1.1\n2018 г.</string>
+    <string name="version">Версия 1.1\nNitron Apps. 2018 г.</string>
+    <string name="hello">Добро пожаловать!\n Введите логин и пароль:</string>
+    <string name="login">ВОЙТИ</string>
+    <string name="prev">\u0020\u0020ПРЕДЫДУЩАЯ НЕДЕЛЯ\u0020\u0020</string>
+    <string name="next">\u0020\u0020СЛЕДУЮЩАЯ НЕДЕЛЯ\u0020\u0020</string>
+    <string name="login_hint">Login</string>
+    <string name="password_hint">Password</string>
+    <string name="student">Ученик</string>
+    <string name="parent">Родитель</string>
+    <string name="parent_name">Родитель:</string>
+    <string name="changeUser">Ваши аккаунты</string>
+
+    <string name="error_connection">Ошибка соединения. Повторите снова.</string>
+    <string name="error_login">Неправильный логин или пароль.</string>
+    <string name="title_activity_settings">SettingsActivity</string>
 </resources>

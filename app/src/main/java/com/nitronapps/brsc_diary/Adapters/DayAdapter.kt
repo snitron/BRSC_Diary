@@ -28,7 +28,7 @@ class DayAdapter(val days: Array<DayModel>, val context: Context): RecyclerView.
     override fun onBindViewHolder(p0: DayViewHolder, p1: Int) {
         p0.day.text = days[p1].dayName
         p0.lessons.layoutManager = LinearLayoutManager(context)
-        p0.lessons.adapter = LessonsAdapter(days[p1])
+        p0.lessons.adapter = LessonsAdapter(days[p1], context)
         p0.lessons.addItemDecoration(MainActivity.SpacesItemDecoration(10))
     }
 

@@ -6,5 +6,15 @@ class DayModel internal constructor(val count: Int,
                                     val marks: Array<String>,
                                     val isWeekend: Boolean,
                                     val dayName: String,
-                                    val teacherComment: String,
-                                    val hrefHw: Array<Array<String>>)
+                                    val teacherComment: Array<String?>,
+                                    val hrefHw: Array<Array<String>?>?,
+                                    val hrefHwNames: Array<Array<String>?>?){
+    fun printModel(): String{
+        var result = ""
+
+        result += dayName + "\n"
+        result += count.toString() + "\n"
+
+        return result
+    }
+}
