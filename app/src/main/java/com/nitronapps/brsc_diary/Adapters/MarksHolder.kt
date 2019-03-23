@@ -25,7 +25,7 @@ class MarksHolder(itemView: View) : ChildViewHolder(itemView){
         averageMark.setBackgroundColor(Color.WHITE)
         averageMark.setTextColor(Color.BLACK)
 
-        marks.text = tableMarks.m.trim()
+        marks.text = tableMarks.m.trim().split(Regex("")).getWithProbels().trim()
         averageMark.text = tableMarks.average_marks.trim()
         averageMark.setTextColor(Color.BLACK)
 
@@ -56,6 +56,15 @@ class MarksHolder(itemView: View) : ChildViewHolder(itemView){
             3 -> position.text = "IV"
             else -> {}
         }
+    }
+
+    fun List<String>.getWithProbels(): String{
+        var result = ""
+
+        for(i in this)
+            result += i + " "
+
+        return result
     }
 
 }

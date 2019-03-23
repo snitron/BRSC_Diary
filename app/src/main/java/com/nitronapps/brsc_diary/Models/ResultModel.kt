@@ -12,12 +12,13 @@ data class ResultModel(@SerializedName("lesson") val lesson: String,
                        @SerializedName("m4") val m4: String,
                        @SerializedName("y") val y: String,
                        @SerializedName("res") val res: String,
+                       @SerializedName("test") val test: String,
                        @SerializedName("isHalfYear") val isHalfYear: Boolean){
 
     fun getResults():Results{
         val results = LinkedList<ResultsMarks>();
 
-        results.add(ResultsMarks(m1, m2, m3, m4, y, res, isHalfYear))
+        results.add(ResultsMarks(m1, m2, m3, m4, y, res, test, isHalfYear))
 
         return(Results(lesson, results))
     }

@@ -3,41 +3,37 @@ package com.nitronapps.brsc_diary
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
-import android.graphics.Paint
 import android.graphics.Typeface
 import android.os.Bundle
-import android.support.design.widget.Snackbar
-import android.support.design.widget.NavigationView
-import android.support.v4.view.GravityCompat
-import android.support.v7.app.ActionBarDrawerToggle
-import android.support.v7.app.AlertDialog
-import android.support.v7.app.AppCompatActivity
+import android.provider.Settings
+import androidx.core.view.GravityCompat
 import android.text.Spannable
 import android.text.SpannableString
-import android.util.Log
-import android.view.Menu
+import android.util.Base64
 import android.view.MenuItem
 import android.view.View
-import android.widget.ImageView
-import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.app.ActionBarDrawerToggle
+import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.app.AppCompatActivity
+import androidx.room.Room
+import com.google.android.material.navigation.NavigationView
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.nitronapps.brsc_diary.Data.APP_SETTINGS
 import com.nitronapps.brsc_diary.Data.APP_VERSION
+import com.nitronapps.brsc_diary.Data.DATABASE_NAME
 import com.nitronapps.brsc_diary.Data.SERVER_ADRESS
+import com.nitronapps.brsc_diary.Database.AppDatabase
+import com.nitronapps.brsc_diary.Database.UserDB
 import com.nitronapps.brsc_diary.Models.NameModel
-import com.nitronapps.brsc_diary.Models.PersonModel
+import com.nitronapps.brsc_diary.Models.UserInfoModel
 import com.nitronapps.brsc_diary.Others.CustomTypefaceSpan
 import com.nitronapps.brsc_diary.Others.IBRSC
 import kotlinx.android.synthetic.main.activity_about.*
 import kotlinx.android.synthetic.main.activity_about.view.*
 import kotlinx.android.synthetic.main.activity_main.*
-import kotlinx.android.synthetic.main.activity_result.*
-import kotlinx.android.synthetic.main.activity_result.view.*
 import kotlinx.android.synthetic.main.app_bar_about.*
-import kotlinx.android.synthetic.main.content_main.*
-import kotlinx.android.synthetic.main.content_result.*
 import kotlinx.android.synthetic.main.nav_header.view.*
 import okhttp3.ConnectionSpec
 import okhttp3.OkHttpClient
@@ -49,47 +45,41 @@ import retrofit2.converter.gson.GsonConverterFactory
 import java.lang.reflect.Type
 import java.util.*
 import java.util.concurrent.TimeUnit
+import javax.crypto.Cipher
+import javax.crypto.spec.IvParameterSpec
+import javax.crypto.spec.SecretKeySpec
 
 class AboutActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener {
 
     private lateinit var mSharedPreferences: SharedPreferences
     private lateinit var mServerAPI: IBRSC
     private var prefId = 0
-    private val arrayListType: Type = object : TypeToken<ArrayList<String>>() {}.type
     private val callListNames = ArrayList<Call<NameModel>>()
     private var user: NameModel? = null
-    private var login = ""
-    private var password = ""
-    private lateinit var ids: ArrayList<String>
     private var isParent = false
-    private var count = 0
+    private lateinit var deviceId: String
+    private lateinit var tmpUser: UserDB
+    private lateinit var appDatabase: AppDatabase
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_about)
         setSupportActionBar(toolbarAbout)
 
+        deviceId = Settings.Secure.getString(getApplicationContext().getContentResolver(), Settings.Secure.ANDROID_ID)
         mSharedPreferences = getSharedPreferences(APP_SETTINGS, Context.MODE_PRIVATE)
         val toggle = ActionBarDrawerToggle(
                 this, drawer_layoutAbout, toolbarAbout, R.string.navigation_drawer_open, R.string.navigation_drawer_close)
         drawer_layoutAbout.addDrawerListener(toggle)
         toggle.syncState()
 
-        mSharedPreferences = getSharedPreferences(APP_SETTINGS, MODE_PRIVATE)
+        appDatabase = Room.databaseBuilder(this, AppDatabase::class.java, DATABASE_NAME).allowMainThreadQueries().build()
+
 
         isParent = mSharedPreferences.getBoolean("isParent", false)
         prefId = mSharedPreferences.getInt("prefId", 0)
 
-        login = mSharedPreferences.getString("login", "")!!
-
-        password = mSharedPreferences.getString("password", "")!!
-
-        ids = Gson().fromJson<ArrayList<String>>(
-                mSharedPreferences.getString("ids", "[]"),
-                arrayListType
-        )
-
-        count = mSharedPreferences.getInt("count", 0)
+        tmpUser = appDatabase.userDao().getUserById(0)
 
         val okhttp = OkHttpClient.Builder()
                 .connectTimeout(100, TimeUnit.SECONDS)
@@ -116,10 +106,7 @@ class AboutActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelect
             nav_view.textViewParentNameAbout.visibility = View.GONE
         }
 
-        if(!mSharedPreferences.contains("name"))
-            getNames()
-        else
-            setPerson()
+        setPerson()
 
         nav_view.setNavigationItemSelectedListener(this)
         val menu = nav_view.menu
@@ -175,7 +162,7 @@ class AboutActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelect
                 if (user != null) {
                     AlertDialog.Builder(this)
                             .setTitle("Выберите аккаунт:")
-                            .setItems(user!!.child_ids, { dialog, which ->
+                            .setItems(user!!.child_ids!!.toTypedArray(), { dialog, which ->
                                 val name = Gson().fromJson(
                                         mSharedPreferences.getString("name", "[]"),
                                         NameModel::class.java
@@ -199,6 +186,7 @@ class AboutActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelect
 
     fun deleteAccount() {
         mSharedPreferences.edit().clear().apply()
+        appDatabase.userDao().deleteAll(tmpUser)
 
         for (i in callListNames.iterator())
             if(!i.isCanceled && i.isExecuted)
@@ -218,52 +206,6 @@ class AboutActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelect
         mi.title = mNewName
     }
 
-    fun getNames() {
-        if (isParent) {
-            callListNames.add(
-                    mServerAPI.getName(
-                            login,
-                            password,
-                            mSharedPreferences.getString("ids", "[]"),
-                            APP_VERSION,
-                            "multiply"
-                    ))
-            callListNames.last().enqueue(
-                    object : Callback<NameModel> {
-                        override fun onFailure(call: Call<NameModel>, t: Throwable) {
-
-                        }
-
-                        override fun onResponse(call: Call<NameModel>, response: Response<NameModel>) {
-                            mSharedPreferences.edit().putString("name", Gson().toJson(response.body())).apply()
-                            setPerson()
-                        }
-                    }
-            )
-        } else {
-            callListNames.add(
-                    mServerAPI.getName(
-                            login,
-                            password,
-                            ids[0],
-                            APP_VERSION,
-                            "one"
-                    ))
-            callListNames.last().enqueue(
-                    object : Callback<NameModel> {
-                        override fun onFailure(call: Call<NameModel>, t: Throwable) {
-
-                        }
-
-                        override fun onResponse(call: Call<NameModel>, response: Response<NameModel>) {
-                            mSharedPreferences.edit().putString("name", Gson().toJson(response.body())).apply()
-                            setPerson()
-                        }
-                    }
-            )
-        }
-    }
-
     fun setPerson() {
         runOnUiThread {
             nav_view.removeHeaderView(nav_view.getHeaderView(0))
@@ -273,7 +215,7 @@ class AboutActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelect
             val parentName = nav_view.textViewParentNameAbout
 
             user = Gson().fromJson(
-                    if (mSharedPreferences.contains("name")) mSharedPreferences.getString("name", "[]") else "[]",
+                    tmpUser.name.decrypt(deviceId),
                     NameModel::class.java
             )
 
@@ -307,5 +249,20 @@ class AboutActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelect
         header.textViewName.text = name.replace("\"", "")
     }
 
+    fun String.decrypt(password: String): String {
+        val secretKeySpec = SecretKeySpec(password.toByteArray(), "AES")
+        val iv = ByteArray(16)
+        val charArray = password.toCharArray()
+        for (i in 0 until charArray.size){
+            iv[i] = charArray[i].toByte()
+        }
+        val ivParameterSpec = IvParameterSpec(iv)
+
+        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+        cipher.init(Cipher.DECRYPT_MODE, secretKeySpec, ivParameterSpec)
+
+        val decryptedByteValue = cipher.doFinal(Base64.decode(this, Base64.DEFAULT))
+        return String(decryptedByteValue)
+    }
 }
 

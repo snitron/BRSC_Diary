@@ -1,5 +1,8 @@
 package com.nitronapps.brsc_diary
 
+
+import android.content.ContentResolver
+import android.content.Context
 import android.content.Intent
 import android.content.Intent.FLAG_ACTIVITY_NO_ANIMATION
 import android.content.SharedPreferences
@@ -7,30 +10,33 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Rect
 import android.graphics.Typeface
-import android.support.v7.app.AppCompatActivity
+import android.net.wifi.WifiManager
 import android.os.Bundle
-import android.support.design.widget.NavigationView
-import android.support.v4.widget.DrawerLayout
-import android.support.v7.app.ActionBarDrawerToggle
-import android.support.v7.app.AlertDialog
-import android.support.v7.widget.LinearLayoutManager
-import android.support.v7.widget.RecyclerView
+import android.provider.Settings
 import android.text.Spannable
 import android.text.SpannableString
 import android.util.Log
 import android.view.MenuItem
 import android.view.View
 import android.widget.Toast
+import androidx.appcompat.app.ActionBarDrawerToggle
+import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.app.AppCompatActivity
+import androidx.drawerlayout.widget.DrawerLayout
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.room.Room
+import com.google.android.material.navigation.NavigationView
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.reflect.TypeToken
 import com.nitronapps.brsc_diary.Adapters.DayAdapter
 import com.nitronapps.brsc_diary.Data.APP_SETTINGS
 import com.nitronapps.brsc_diary.Data.APP_VERSION
+import com.nitronapps.brsc_diary.Data.DATABASE_NAME
 import com.nitronapps.brsc_diary.Data.SERVER_ADRESS
+import com.nitronapps.brsc_diary.Database.AppDatabase
 import com.nitronapps.brsc_diary.Models.DayModel
 import com.nitronapps.brsc_diary.Models.NameModel
-import com.nitronapps.brsc_diary.Models.UserModel
 import com.nitronapps.brsc_diary.Others.CustomTypefaceSpan
 import com.nitronapps.brsc_diary.Others.IBRSC
 import kotlinx.android.synthetic.main.activity_main.*
@@ -48,11 +54,19 @@ import java.lang.reflect.Type
 import java.util.*
 import java.util.concurrent.TimeUnit
 import kotlin.collections.ArrayList
+import androidx.recyclerview.widget.RecyclerView
+import javax.crypto.Cipher
+import javax.crypto.spec.IvParameterSpec
+import javax.crypto.spec.SecretKeySpec
+import android.util.Base64
+import com.nitronapps.brsc_diary.Database.UserDB
+import com.nitronapps.brsc_diary.Models.UserInfoModel
 
 
 class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener {
 
     private lateinit var mSharedPreferences: SharedPreferences
+    private lateinit var appDatabase: AppDatabase
     private lateinit var mServerAPI: IBRSC
     private lateinit var mOkHttpClient: OkHttpClient
     private var user: NameModel? = null
@@ -64,11 +78,15 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     private var password = ""
     private lateinit var ids: ArrayList<String>
     private var isParent = false
-
+    private lateinit var deviceId: String
+    private lateinit var tmpUser: UserDB
+    private lateinit var tmpUserInfo: Array<UserInfoModel>
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        deviceId = Settings.Secure.getString(getApplicationContext().getContentResolver(), Settings.Secure.ANDROID_ID)
+        appDatabase = Room.databaseBuilder(this, AppDatabase::class.java, DATABASE_NAME).allowMainThreadQueries().build()
 
         mSharedPreferences = getSharedPreferences(APP_SETTINGS, MODE_PRIVATE)
 
@@ -79,6 +97,20 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             val intent = Intent(this, LoginActivity::class.java)
             intent.putExtra("type", "first")
             startActivity(intent)
+        }else{
+            tmpUser = appDatabase.userDao().getUserById(0)
+
+            login = tmpUser.login.decrypt(deviceId) /*mSharedPreferences.getString("login", "")!!*/
+            password = tmpUser.password.decrypt(deviceId) /*mSharedPreferences.getString("password", "")!!*/
+
+            tmpUserInfo = Gson().fromJson<Array<UserInfoModel>>(
+                    tmpUser.uid.decrypt(deviceId),
+                    object : TypeToken<Array<UserInfoModel>>() {}.type
+            )
+
+            ids = tmpUserInfo.getIds()
+
+
         }
 
         if (mSharedPreferences.contains("saved")) {
@@ -90,17 +122,8 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         mSharedPreferences.edit().putInt("curWeek", GregorianCalendar().get(GregorianCalendar.WEEK_OF_YEAR)).apply()
 
         isParent = mSharedPreferences.getBoolean("isParent", false)
-
         prefId = mSharedPreferences.getInt("prefId", 0)
 
-        login = mSharedPreferences.getString("login", "")!!
-
-        password = mSharedPreferences.getString("password", "")!!
-
-        ids = Gson().fromJson<ArrayList<String>>(
-                mSharedPreferences.getString("ids", "[]"),
-                arrayListType
-        )
 
         mOkHttpClient = OkHttpClient.Builder()
                 .connectTimeout(100, TimeUnit.SECONDS)
@@ -144,10 +167,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         if (mSharedPreferences.contains("wasLogin") || mSharedPreferences.getBoolean("wasLogin", false)) {
             initRecyclerView()
 
-            if (!mSharedPreferences.contains("name"))
-                getNames()
-            else
-                setPerson()
+            setPerson()
         }
         buttonNext.setOnClickListener {
             var curId = ""
@@ -166,7 +186,11 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                         (mSharedPreferences.getInt("curWeek", 1) + 1).toString()
                     else
                         "1",
-                    curId
+                    curId,
+                    tmpUserInfo[prefId].rooId,
+                    tmpUserInfo[prefId].departmentId,
+                    tmpUserInfo[prefId].instituteId,
+                    GregorianCalendar().get(GregorianCalendar.YEAR).toString()
             ))
 
             callListDiary.last().enqueue(object : retrofit2.Callback<Array<DayModel>> {
@@ -191,7 +215,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
                 }
 
-            })
+        })
 
         }
 
@@ -212,7 +236,11 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                         (mSharedPreferences.getInt("curWeek", 1) - 1).toString()
                     else
                         "1",
-                    curId
+                    curId,
+                    tmpUserInfo[prefId].rooId,
+                    tmpUserInfo[prefId].departmentId,
+                    tmpUserInfo[prefId].instituteId,
+                    GregorianCalendar().get(GregorianCalendar.YEAR).toString()
             ))
 
             callListDiary.last().enqueue(object : retrofit2.Callback<Array<DayModel>> {
@@ -303,7 +331,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 if (user != null) {
                     AlertDialog.Builder(this)
                             .setTitle("Выберите аккаунт:")
-                            .setItems(user!!.child_ids, { dialog, which ->
+                            .setItems(user!!.child_ids!!.toTypedArray(), { dialog, which ->
                                 val name = Gson().fromJson(
                                         mSharedPreferences.getString("name", "[]"),
                                         NameModel::class.java
@@ -342,7 +370,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             val parentName = navigation_view.textViewParentNameMain
 
             user = Gson().fromJson(
-                    if (mSharedPreferences.contains("name")) mSharedPreferences.getString("name", "[]") else "[]",
+                    tmpUser.name.decrypt(deviceId),
                     NameModel::class.java
             )
 
@@ -365,6 +393,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
     fun deleteAccount() {
         mSharedPreferences.edit().clear().apply()
+        appDatabase.userDao().deleteAll(tmpUser)
         recyclerView.adapter = null
 
         for (i in callListDiary.iterator())
@@ -380,60 +409,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
         startActivity(intent)
     }
-
-
-    /*
-    * getNames()
-    * void
-    * Gets names from server
-    * */
-
-    fun getNames() {
-        if (isParent) {
-            callListNames.add(
-                    mServerAPI.getName(
-                            login,
-                            password,
-                            mSharedPreferences.getString("ids", "[]"),
-                            APP_VERSION,
-                            "multiply"
-                    ))
-            callListNames.last().enqueue(
-                    object : Callback<NameModel> {
-                        override fun onFailure(call: Call<NameModel>, t: Throwable) {
-
-                        }
-
-                        override fun onResponse(call: Call<NameModel>, response: Response<NameModel>) {
-                            mSharedPreferences.edit().putString("name", Gson().toJson(response.body())).apply()
-                            setPerson()
-                        }
-                    }
-            )
-        } else {
-            callListNames.add(
-                    mServerAPI.getName(
-                            login,
-                            password,
-                            ids[0],
-                            APP_VERSION,
-                            "one"
-                    ))
-            callListNames.last().enqueue(
-                    object : Callback<NameModel> {
-                        override fun onFailure(call: Call<NameModel>, t: Throwable) {
-
-                        }
-
-                        override fun onResponse(call: Call<NameModel>, response: Response<NameModel>) {
-                            mSharedPreferences.edit().putString("name", Gson().toJson(response.body())).apply()
-                            setPerson()
-                        }
-                    }
-            )
-        }
-    }
-
 
     fun initRecyclerView() {
         var curId = ""
@@ -451,7 +426,11 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                         login,
                         password,
                         mSharedPreferences.getInt("curWeek", 1).toString(),
-                        curId
+                        curId,
+                        tmpUserInfo[prefId].rooId,
+                        tmpUserInfo[prefId].departmentId,
+                        tmpUserInfo[prefId].instituteId,
+                        GregorianCalendar().get(GregorianCalendar.YEAR).toString()
                 ))
         callListDiary.last().enqueue(object : retrofit2.Callback<Array<DayModel>> {
             override fun onFailure(call: Call<Array<DayModel>>, t: Throwable) {
@@ -504,4 +483,28 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         }
     }
 
+    fun String.decrypt(password: String): String {
+        val secretKeySpec = SecretKeySpec(password.toByteArray(), "AES")
+        val iv = ByteArray(16)
+        val charArray = password.toCharArray()
+        for (i in 0 until charArray.size){
+            iv[i] = charArray[i].toByte()
+        }
+        val ivParameterSpec = IvParameterSpec(iv)
+
+        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+        cipher.init(Cipher.DECRYPT_MODE, secretKeySpec, ivParameterSpec)
+
+        val decryptedByteValue = cipher.doFinal(Base64.decode(this, Base64.DEFAULT))
+        return String(decryptedByteValue)
+    }
+
+    fun Array<UserInfoModel>.getIds(): ArrayList<String>{
+        val result = ArrayList<String>()
+
+        for (i in this)
+            result.add(i.userId)
+
+        return result
+    }
 }
