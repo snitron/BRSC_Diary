@@ -9,8 +9,10 @@ class ResultsMarks(val m1: String,
                    val m4: String,
                    val y: String,
                    val res: String,
+                   val test: String,
                    val isHalfYear: Boolean):Parcelable {
     constructor(parcel: Parcel) : this(
+            parcel.readString(),
             parcel.readString(),
             parcel.readString(),
             parcel.readString(),
@@ -27,6 +29,7 @@ class ResultsMarks(val m1: String,
         parcel.writeString(m4)
         parcel.writeString(y)
         parcel.writeString(res)
+        parcel.writeString(test)
         parcel.writeByte(if (isHalfYear) 1 else 0)
     }
 

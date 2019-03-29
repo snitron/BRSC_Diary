@@ -1,17 +1,16 @@
 package com.nitronapps.brsc_diary.Adapters
 
 import android.content.Context
-import android.support.v7.widget.CardView
-import android.support.v7.widget.LinearLayoutManager
-import android.support.v7.widget.RecyclerView
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
-import com.nitronapps.brsc_diary.Models.DayModel
+import androidx.cardview.widget.CardView
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.nitronapps.brsc_diary.MainActivity
+import com.nitronapps.brsc_diary.Models.DayModel
 import com.nitronapps.brsc_diary.R
-import com.nitronapps.brsc_diary.Adapters.LessonsAdapter
 
 
 class DayAdapter(val days: Array<DayModel>, val context: Context): RecyclerView.Adapter<DayAdapter.DayViewHolder>() {

@@ -1,18 +1,19 @@
 package com.nitronapps.brsc_diary.Models
 
+import com.google.gson.annotations.SerializedName
 import com.nitronapps.brsc_diary.Data.Lesson
 import com.nitronapps.brsc_diary.Data.TableMarks
 import java.util.*
 
-data class TableModel(val lesson: String,
-                      val average_mark1: String,
-                      val average_mark2: String,
-                      val average_mark3: String,
-                      val average_mark4: String,
-                      val m1: String,
-                      val m2: String,
-                      val m3: String,
-                      val m4: String){
+data class TableModel(@SerializedName("lesson") val lesson: String,
+                      @SerializedName("average_mark1") val average_mark1: String,
+                      @SerializedName("average_mark2") val average_mark2: String,
+                      @SerializedName("average_mark3") val average_mark3: String,
+                      @SerializedName("average_mark4") val average_mark4: String,
+                      @SerializedName("m1") val m1: String,
+                      @SerializedName("m2") val m2: String,
+                      @SerializedName("m3") val m3: String,
+                      @SerializedName("m4") val m4: String){
 
 
     fun getLesson():Lesson{

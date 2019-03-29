@@ -1,5 +1,8 @@
 package com.nitronapps.brsc_diary
 
+
+import android.content.ContentResolver
+import android.content.Context
 import android.content.Intent
 import android.content.Intent.FLAG_ACTIVITY_NO_ANIMATION
 import android.content.SharedPreferences
@@ -7,30 +10,29 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Rect
 import android.graphics.Typeface
-import android.support.v7.app.AppCompatActivity
+import android.net.wifi.WifiManager
 import android.os.Bundle
-import android.support.design.widget.NavigationView
-import android.support.v4.widget.DrawerLayout
-import android.support.v7.app.ActionBarDrawerToggle
-import android.support.v7.app.AlertDialog
-import android.support.v7.widget.LinearLayoutManager
-import android.support.v7.widget.RecyclerView
+import android.provider.Settings
 import android.text.Spannable
 import android.text.SpannableString
 import android.util.Log
 import android.view.MenuItem
 import android.view.View
 import android.widget.Toast
+import androidx.appcompat.app.ActionBarDrawerToggle
+import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.app.AppCompatActivity
+import androidx.drawerlayout.widget.DrawerLayout
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.room.Room
+import com.google.android.material.navigation.NavigationView
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.reflect.TypeToken
 import com.nitronapps.brsc_diary.Adapters.DayAdapter
-import com.nitronapps.brsc_diary.Data.APP_SETTINGS
-import com.nitronapps.brsc_diary.Data.APP_VERSION
-import com.nitronapps.brsc_diary.Data.SERVER_ADRESS
+import com.nitronapps.brsc_diary.Database.AppDatabase
 import com.nitronapps.brsc_diary.Models.DayModel
 import com.nitronapps.brsc_diary.Models.NameModel
-import com.nitronapps.brsc_diary.Models.UserModel
 import com.nitronapps.brsc_diary.Others.CustomTypefaceSpan
 import com.nitronapps.brsc_diary.Others.IBRSC
 import kotlinx.android.synthetic.main.activity_main.*
@@ -48,57 +50,58 @@ import java.lang.reflect.Type
 import java.util.*
 import java.util.concurrent.TimeUnit
 import kotlin.collections.ArrayList
+import androidx.recyclerview.widget.RecyclerView
+import javax.crypto.Cipher
+import javax.crypto.spec.IvParameterSpec
+import javax.crypto.spec.SecretKeySpec
+import android.util.Base64
+import android.view.Menu
+import androidx.room.migration.Migration
+import com.nitronapps.brsc_diary.Data.*
+import com.nitronapps.brsc_diary.Database.UserDB
+import com.nitronapps.brsc_diary.Models.UserInfoModel
 
 
 class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener {
 
     private lateinit var mSharedPreferences: SharedPreferences
+    private lateinit var appDatabase: AppDatabase
     private lateinit var mServerAPI: IBRSC
     private lateinit var mOkHttpClient: OkHttpClient
     private var user: NameModel? = null
     private var prefId = 0
     private val arrayListType: Type = object : TypeToken<ArrayList<String>>() {}.type
-    private val callListNames = ArrayList<Call<NameModel>>()
+    private val arrayDepartmentsType: Type = object : TypeToken<Array<Departments>>() {}.type
+    private val callListDepartments = ArrayList<Call<Array<Departments>>>()
     private val callListDiary = ArrayList<Call<Array<DayModel>>>()
     private var login = ""
     private var password = ""
     private lateinit var ids: ArrayList<String>
     private var isParent = false
-
+    private lateinit var deviceId: String
+    private lateinit var tmpUser: UserDB
+    private lateinit var tmpUserInfo: Array<UserInfoModel>
+    private var departments: Array<Departments>? = null
+    private lateinit var prefDepartment: Array<Departments>
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        if(intent.getStringExtra("type") != null)
+            if(intent.getStringExtra("type").equals("notification"))
+                AlertDialog.Builder(this)
+                        .setTitle(resources.getString(R.string.notification))
+                        .setMessage(intent.getStringExtra("message"))
+                        .create()
+                        .show()
+
+        deviceId = Settings.Secure.getString(getApplicationContext().getContentResolver(), Settings.Secure.ANDROID_ID)
+
+        appDatabase = Room.databaseBuilder(this, AppDatabase::class.java, DATABASE_NAME)
+                .fallbackToDestructiveMigration().allowMainThreadQueries().build()
+
         mSharedPreferences = getSharedPreferences(APP_SETTINGS, MODE_PRIVATE)
-
-        if (!mSharedPreferences.contains("wasLogin") || !mSharedPreferences.getBoolean("wasLogin", false)) {
-            mSharedPreferences.edit().clear().apply()
-            val intent = Intent(this, LoginActivity::class.java)
-            intent.putExtra("type", "first")
-            startActivity(intent)
-        }
-
-        if (mSharedPreferences.contains("saved")) {
-            val day = Gson().fromJson(mSharedPreferences.getString("saved", "[]"), Array<DayModel>::class.java)
-            recyclerView.adapter = DayAdapter(day, applicationContext)
-            recyclerView.layoutManager = LinearLayoutManager(applicationContext)
-        }
-
-        mSharedPreferences.edit().putInt("curWeek", GregorianCalendar().get(GregorianCalendar.WEEK_OF_YEAR)).apply()
-
-        isParent = mSharedPreferences.getBoolean("isParent", false)
-
-        prefId = mSharedPreferences.getInt("prefId", 0)
-
-        login = mSharedPreferences.getString("login", "")!!
-
-        password = mSharedPreferences.getString("password", "")!!
-
-        ids = Gson().fromJson<ArrayList<String>>(
-                mSharedPreferences.getString("ids", "[]"),
-                arrayListType
-        )
 
         mOkHttpClient = OkHttpClient.Builder()
                 .connectTimeout(100, TimeUnit.SECONDS)
@@ -118,9 +121,59 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
         mServerAPI = retrofit.create(IBRSC::class.java)
 
+
+        if (!mSharedPreferences.contains("wasLogin") || !mSharedPreferences.getBoolean("wasLogin", false)
+                || !mSharedPreferences.contains("version") || !mSharedPreferences.getString("version", "").equals(APP_VERSION) ||
+                appDatabase.userDao().getDataCount() == 0
+        ) {
+            mSharedPreferences.edit().clear().apply()
+            val intent = Intent(this, LoginActivity::class.java)
+            intent.putExtra("type", "first")
+            startActivity(intent)
+        } else {
+            tmpUser = appDatabase.userDao().getUserById(0)
+
+            login = tmpUser.login.decrypt(deviceId) /*mSharedPreferences.getString("login", "")!!*/
+            password = tmpUser.password.decrypt(deviceId) /*mSharedPreferences.getString("password", "")!!*/
+
+            tmpUserInfo = Gson().fromJson<Array<UserInfoModel>>(
+                    tmpUser.uid.decrypt(deviceId),
+                    object : TypeToken<Array<UserInfoModel>>() {}.type
+            )
+
+            ids = tmpUserInfo.getIds()
+
+            prefDepartment = Gson().fromJson<Array<Departments>>(
+                    tmpUser.prefDepartment.decrypt(deviceId),
+                    arrayDepartmentsType
+            )
+
+            if (!mSharedPreferences.getBoolean("wasDepartments", false))
+                initDepartments()
+            else
+                departments = Gson().fromJson<Array<Departments>>(
+                        tmpUser.dids.decrypt(deviceId),
+                        arrayDepartmentsType
+                )
+
+        }
+
+        if (mSharedPreferences.contains("saved")) {
+            val day = Gson().fromJson(mSharedPreferences.getString("saved", "[]"), Array<DayModel>::class.java)
+            recyclerView.adapter = DayAdapter(day, applicationContext)
+            recyclerView.layoutManager = LinearLayoutManager(applicationContext)
+        }
+
+        mSharedPreferences.edit().putInt("curWeek", GregorianCalendar().get(GregorianCalendar.WEEK_OF_YEAR)).apply()
+
+        isParent = mSharedPreferences.getBoolean("isParent", false)
+        prefId = mSharedPreferences.getInt("prefId", 0)
+
+
+
         swipeRefreshLayout.setColorSchemeColors(Color.parseColor("#2980b9"), Color.parseColor("#e74c3c"), Color.parseColor("#f1c40f"), Color.parseColor("#2ecc71"))
         swipeRefreshLayout.isRefreshing = true
-        swipeRefreshLayout.setDistanceToTriggerSync(20)
+        swipeRefreshLayout.setDistanceToTriggerSync(500)
 
         if (isParent) {
             navigation_view.menu.clear()
@@ -142,10 +195,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         if (mSharedPreferences.contains("wasLogin") || mSharedPreferences.getBoolean("wasLogin", false)) {
             initRecyclerView()
 
-            if (!mSharedPreferences.contains("name"))
-                getNames()
-            else
-                setPerson()
+            setPerson()
         }
         buttonNext.setOnClickListener {
             var curId = ""
@@ -164,7 +214,11 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                         (mSharedPreferences.getInt("curWeek", 1) + 1).toString()
                     else
                         "1",
-                    curId
+                    curId,
+                    tmpUserInfo[prefId].rooId,
+                    prefDepartment[prefId].departmentId,
+                    tmpUserInfo[prefId].instituteId,
+                    prefDepartment[prefId].getRightYear()
             ))
 
             callListDiary.last().enqueue(object : retrofit2.Callback<Array<DayModel>> {
@@ -210,7 +264,11 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                         (mSharedPreferences.getInt("curWeek", 1) - 1).toString()
                     else
                         "1",
-                    curId
+                    curId,
+                    tmpUserInfo[prefId].rooId,
+                    prefDepartment[prefId].departmentId,
+                    tmpUserInfo[prefId].instituteId,
+                    prefDepartment[prefId].getRightYear()
             ))
 
             callListDiary.last().enqueue(object : retrofit2.Callback<Array<DayModel>> {
@@ -300,23 +358,47 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             if (isParent) R.id.nav_children else -1 -> {
                 if (user != null) {
                     AlertDialog.Builder(this)
-                            .setTitle("Выберите аккаунт:")
-                            .setItems(user!!.child_ids, { dialog, which ->
+                            .setTitle(resources.getString(R.string.changeUser))
+                            .setItems(user!!.child_ids!!.toTypedArray(), { dialog, which ->
                                 val name = Gson().fromJson(
-                                        mSharedPreferences.getString("name", "[]"),
+                                        tmpUser.name.decrypt(deviceId),
                                         NameModel::class.java
                                 )
                                 drawer_layout.closeDrawers()
                                 prefId = which
                                 mSharedPreferences.edit().putInt("prefId", which).apply()
                                 setPersonName(name?.child_ids!![prefId])
+
                                 recyclerView.adapter = null
+                                departments = null
+                                initDepartments()
                                 initRecyclerView()
                             }).create().show()
                 } else
                     Toast.makeText(this, resources.getString(R.string.loading), Toast.LENGTH_LONG).show()
             }
 
+            R.id.nav_setyear -> {
+                if (departments == null) {
+                    AlertDialog.Builder(this)
+                            .setTitle(resources.getString(R.string.check_year))
+                            .setMessage(resources.getString(R.string.loading))
+                            .create()
+                            .show()
+                } else {
+                    AlertDialog.Builder(this)
+                            .setTitle(resources.getString(R.string.check_year))
+                            .setItems(departments!!.getYears().toTypedArray()
+                            ) { dialog, which ->
+                                if (!prefDepartment.equals(departments!![which])) {
+                                    prefDepartment[prefId] = departments!![which]
+                                    appDatabase.userDao().setPrefDepartments(0, Gson().toJson(prefDepartment).encrypt(deviceId))
+                                    initRecyclerView()
+                                }
+                                drawer_layout.closeDrawers()
+                            }.show()
+                }
+            }
             else -> {
             }
         }
@@ -340,7 +422,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             val parentName = navigation_view.textViewParentNameMain
 
             user = Gson().fromJson(
-                    if (mSharedPreferences.contains("name")) mSharedPreferences.getString("name", "[]") else "[]",
+                    tmpUser.name.decrypt(deviceId),
                     NameModel::class.java
             )
 
@@ -363,13 +445,14 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
     fun deleteAccount() {
         mSharedPreferences.edit().clear().apply()
+        appDatabase.userDao().deleteAll(tmpUser)
         recyclerView.adapter = null
 
         for (i in callListDiary.iterator())
             if (!i.isCanceled && i.isExecuted)
                 i.cancel()
 
-        for (i in callListNames.iterator())
+        for (i in callListDepartments.iterator())
             if (!i.isCanceled && i.isExecuted)
                 i.cancel()
 
@@ -379,59 +462,41 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         startActivity(intent)
     }
 
+    fun initDepartments() {
+        var curId = ""
+        if (isParent)
+            curId = ids[prefId]
+        else
+            curId = ids[0]
 
-    /*
-    * getNames()
-    * void
-    * Gets names from server
-    * */
+        callListDepartments.add(
+                mServerAPI.getDiaryYears(
+                        login,
+                        password,
+                        curId,
+                        tmpUserInfo[prefId].rooId,
+                        prefDepartment[prefId].departmentId,
+                        tmpUserInfo[prefId].instituteId))
 
-    fun getNames() {
-        if (isParent) {
-            callListNames.add(
-                    mServerAPI.getName(
-                            login,
-                            password,
-                            mSharedPreferences.getString("ids", "[]"),
-                            APP_VERSION,
-                            "multiply"
-                    ))
-            callListNames.last().enqueue(
-                    object : Callback<NameModel> {
-                        override fun onFailure(call: Call<NameModel>, t: Throwable) {
+        callListDepartments.last().enqueue(object : retrofit2.Callback<Array<Departments>> {
+            override fun onFailure(call: Call<Array<Departments>>, t: Throwable) {
+                runOnUiThread {
+                    Toast.makeText(applicationContext, resources.getString(R.string.error_load_departments), Toast.LENGTH_SHORT).show()
+                }
+            }
 
-                        }
+            override fun onResponse(call: Call<Array<Departments>>, response: Response<Array<Departments>>) {
+                Log.w("departmentsSuccess", Gson().toJson(response.body()))
+                if (response.body() != null && response.body()!!.isNotEmpty()) {
 
-                        override fun onResponse(call: Call<NameModel>, response: Response<NameModel>) {
-                            mSharedPreferences.edit().putString("name", Gson().toJson(response.body())).apply()
-                            setPerson()
-                        }
-                    }
-            )
-        } else {
-            callListNames.add(
-                    mServerAPI.getName(
-                            login,
-                            password,
-                            ids[0],
-                            APP_VERSION,
-                            "one"
-                    ))
-            callListNames.last().enqueue(
-                    object : Callback<NameModel> {
-                        override fun onFailure(call: Call<NameModel>, t: Throwable) {
+                    departments = response.body()!!
+                    appDatabase.userDao().setDepartments(0, Gson().toJson(departments).encrypt(deviceId))
+                    mSharedPreferences.edit().putBoolean("wasDepartments", true).apply()
+                }
+            }
 
-                        }
-
-                        override fun onResponse(call: Call<NameModel>, response: Response<NameModel>) {
-                            mSharedPreferences.edit().putString("name", Gson().toJson(response.body())).apply()
-                            setPerson()
-                        }
-                    }
-            )
-        }
+        })
     }
-
 
     fun initRecyclerView() {
         var curId = ""
@@ -449,7 +514,11 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                         login,
                         password,
                         mSharedPreferences.getInt("curWeek", 1).toString(),
-                        curId
+                        curId,
+                        tmpUserInfo[prefId].rooId,
+                        prefDepartment[prefId].departmentId,
+                        tmpUserInfo[prefId].instituteId,
+                        prefDepartment[prefId].getRightYear()
                 ))
         callListDiary.last().enqueue(object : retrofit2.Callback<Array<DayModel>> {
             override fun onFailure(call: Call<Array<DayModel>>, t: Throwable) {
@@ -491,6 +560,10 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         return name.substring(0, length)
     }
 
+    override fun onBackPressed() {
+
+    }
+
     class SpacesItemDecoration(private val space: Int) : RecyclerView.ItemDecoration() {
 
         override fun getItemOffsets(outRect: Rect, view: View, parent: RecyclerView, state: RecyclerView.State) {
@@ -499,4 +572,53 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         }
     }
 
+    private fun String.decrypt(password: String): String {
+        val secretKeySpec = SecretKeySpec(password.toByteArray(), "AES")
+        val iv = ByteArray(16)
+        val charArray = password.toCharArray()
+        for (i in 0 until charArray.size) {
+            iv[i] = charArray[i].toByte()
+        }
+        val ivParameterSpec = IvParameterSpec(iv)
+
+        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+        cipher.init(Cipher.DECRYPT_MODE, secretKeySpec, ivParameterSpec)
+
+        val decryptedByteValue = cipher.doFinal(Base64.decode(this, Base64.DEFAULT))
+        return String(decryptedByteValue)
+    }
+
+    private fun String.encrypt(password: String): String {
+        val secretKeySpec = SecretKeySpec(password.toByteArray(), "AES")
+        val iv = ByteArray(16)
+        val charArray = password.toCharArray()
+        for (i in 0 until charArray.size) {
+            iv[i] = charArray[i].toByte()
+        }
+        val ivParameterSpec = IvParameterSpec(iv)
+
+        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+        cipher.init(Cipher.ENCRYPT_MODE, secretKeySpec, ivParameterSpec)
+
+        val encryptedValue = cipher.doFinal(this.toByteArray())
+        return Base64.encodeToString(encryptedValue, Base64.DEFAULT)
+    }
+
+    private fun Array<UserInfoModel>.getIds(): ArrayList<String> {
+        val result = ArrayList<String>()
+
+        for (i in this)
+            result.add(i.userId)
+
+        return result
+    }
+
+    private fun Array<Departments>.getYears(): ArrayList<String> {
+        val result = ArrayList<String>()
+
+        for (i in this)
+            result.add(i.name)
+
+        return result
+    }
 }

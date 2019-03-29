@@ -1,14 +1,16 @@
 package com.nitronapps.brsc_diary.Models
 
-class DayModel internal constructor(val count: Int,
-                                    val lessons: Array<String>,
-                                    val homeworks: Array<String>,
-                                    val marks: Array<String>,
-                                    val isWeekend: Boolean,
-                                    val dayName: String,
-                                    val teacherComment: Array<String?>,
-                                    val hrefHw: Array<Array<String>?>?,
-                                    val hrefHwNames: Array<Array<String>?>?){
+import com.google.gson.annotations.SerializedName
+
+class DayModel internal constructor(@SerializedName("count") val count: Int,
+                                    @SerializedName("lessons") val lessons: Array<String>,
+                                    @SerializedName("homeworks") val homeworks: Array<String>,
+                                    @SerializedName("marks") val marks: Array<String>,
+                                    @SerializedName("isWeekend") val isWeekend: Boolean,
+                                    @SerializedName("dayName") val dayName: String,
+                                    @SerializedName("teacherComment") val teacherComment: Array<String?>,
+                                    @SerializedName("hrefHw") val hrefHw: Array<Array<String>?>?,
+                                    @SerializedName("hrefHwNames") val hrefHwNames: Array<Array<String>?>?){
     fun printModel(): String{
         var result = ""
 

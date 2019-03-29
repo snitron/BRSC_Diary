@@ -1,5 +1,6 @@
 package com.nitronapps.brsc_diary.Others
 
+import com.nitronapps.brsc_diary.Data.Departments
 import com.nitronapps.brsc_diary.Models.*
 import retrofit2.Call
 import retrofit2.http.*
@@ -7,36 +8,45 @@ import retrofit2.http.*
 
 interface IBRSC {
     @Headers("User-Agent: Nitron Apps BRSC Diary Http Connector")
-    @GET("getId.php")
+    @GET("getId")
     fun getId(@Query("login") login: String,
-              @Query("password") password: String,
-              @Query("version") version: String): Call<UserModel>
+              @Query("password") password: String): Call<UserModel>
 
     @Headers("User-Agent: Nitron Apps BRSC Diary Http Connector")
-    @GET("parseMain.php")
+    @GET("parseMain")
     fun getDiary(@Query("login") login: String?,
                  @Query("password") password: String?,
                  @Query("week") week: String?,
-                 @Query("userID") userID: String?
-                 ): Call<Array<DayModel>>
+                 @Query("id") userID: String?,
+                 @Query("rooId") rooId: String?,
+                 @Query("departmentId") departmentId: String?,
+                 @Query("instituteId") instituteId: String?,
+                 @Query("year") year: String?): Call<Array<DayModel>>
 
     @Headers("User-Agent: Nitron Apps BRSC Diary Http Connector")
-    @GET("parseTable.php")
+    @GET("parseTable")
     fun getTable(@Query("login") login: String?,
                  @Query("password") password: String?,
-                 @Query("userID") userID: String?): Call<Array<TableModel>>
+                 @Query("id") userID: String?,
+                 @Query("rooId") rooId: String?,
+                 @Query("departmentId") departmentId: String?,
+                 @Query("instituteId") instituteId: String?): Call<Array<TableModel>>
 
     @Headers("User-Agent: Nitron Apps BRSC Diary Http Connector")
-    @GET("parseResults.php")
+    @GET("parseResults")
     fun getResults(@Query("login") login: String?,
                    @Query("password") password: String?,
-                   @Query("userID") userID: String?): Call<Array<ResultModel>>
+                   @Query("id") userID: String?,
+                   @Query("rooId") rooId: String?,
+                   @Query("departmentId") departmentId: String?,
+                   @Query("instituteId") instituteId: String?): Call<Array<ResultModel>>
 
     @Headers("User-Agent: Nitron Apps BRSC Diary Http Connector")
-    @GET("getName.php")
-    fun getName(@Query("login") login: String?,
-                @Query("password") password: String?,
-                @Query("child_ids") userID: String?,
-                @Query("version") version: String,
-                @Query("option") option: String): Call<NameModel>
+    @GET("getDiaryYears")
+    fun getDiaryYears(@Query("login") login: String?,
+                      @Query("password") password: String?,
+                      @Query("id") userID: String?,
+                      @Query("rooId") rooId: String?,
+                      @Query("departmentId") departmentId: String?,
+                      @Query("instituteId") instituteId: String?): Call<Array<Departments>>
 }

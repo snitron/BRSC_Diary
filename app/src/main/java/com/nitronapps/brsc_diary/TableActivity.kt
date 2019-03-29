@@ -6,31 +6,34 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Typeface
 import android.os.Bundle
-import android.support.constraint.ConstraintSet
-import android.support.design.widget.NavigationView
-import android.support.v7.app.ActionBarDrawerToggle
-import android.support.v7.app.AlertDialog
-import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.LinearLayoutManager
+import android.provider.Settings
 import android.text.Spannable
 import android.text.SpannableString
+import android.util.Base64
 import android.util.Log
 import android.view.MenuItem
 import android.view.View
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.app.ActionBarDrawerToggle
+import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.app.AppCompatActivity
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.room.Room
+import com.google.android.material.navigation.NavigationView
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.nitronapps.brsc_diary.Adapters.ResultsAdapter
 import com.nitronapps.brsc_diary.Adapters.TableAdapter
 import com.nitronapps.brsc_diary.Data.*
+import com.nitronapps.brsc_diary.Database.AppDatabase
+import com.nitronapps.brsc_diary.Database.UserDB
 import com.nitronapps.brsc_diary.Models.*
 import com.nitronapps.brsc_diary.Others.CustomTypefaceSpan
 import com.nitronapps.brsc_diary.Others.IBRSC
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.activity_main.view.*
-
 import kotlinx.android.synthetic.main.activity_table.*
 import kotlinx.android.synthetic.main.activity_table.view.*
 import kotlinx.android.synthetic.main.app_bar_main.*
@@ -49,6 +52,9 @@ import retrofit2.converter.gson.GsonConverterFactory
 import java.lang.reflect.Type
 import java.util.*
 import java.util.concurrent.TimeUnit
+import javax.crypto.Cipher
+import javax.crypto.spec.IvParameterSpec
+import javax.crypto.spec.SecretKeySpec
 
 class TableActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener {
 
@@ -58,14 +64,20 @@ class TableActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelect
     private var user: NameModel? = null
     private var prefId = 0
     private val arrayListType: Type = object : TypeToken<ArrayList<String>>() {}.type
-    private val callListNames = ArrayList<Call<NameModel>>()
+    private val arrayDepartmentsType: Type = object : TypeToken<Array<Departments>>() {}.type
+    private val callListDepartments = ArrayList<Call<Array<Departments>>>()
     private val callListTable = ArrayList<Call<Array<TableModel>>>()
     private var login = ""
     private var password = ""
     private lateinit var ids: ArrayList<String>
     private var isParent = false
     private var count = 0
-
+    private lateinit var appDatabase: AppDatabase
+    private lateinit var tmpUser: UserDB
+    private lateinit var tmpUserInfo: Array<UserInfoModel>
+    private lateinit var deviceId: String
+    private var departments: Array<Departments>? = null
+    private lateinit var prefDepartment: Array<Departments>
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -74,32 +86,7 @@ class TableActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelect
 
         swipeRefreshLayoutTable.setColorSchemeColors(Color.parseColor("#2980b9"), Color.parseColor("#e74c3c"), Color.parseColor("#f1c40f"), Color.parseColor("#2ecc71"))
         swipeRefreshLayoutTable.isRefreshing = true
-
-        mSharedPreferences = getSharedPreferences(APP_SETTINGS, MODE_PRIVATE)
-
-        isParent = mSharedPreferences.getBoolean("isParent", false)
-        prefId = mSharedPreferences.getInt("prefId", 0)
-
-        login = mSharedPreferences.getString("login", "")!!
-
-        password = mSharedPreferences.getString("password", "")!!
-
-        ids = Gson().fromJson<ArrayList<String>>(
-                mSharedPreferences.getString("ids", "[]"),
-                arrayListType
-        )
-
-        count = mSharedPreferences.getInt("count", 0)
-
-        if (isParent) {
-            navigation_viewTable.menu.clear()
-            navigation_viewTable.inflateMenu(R.menu.menu_parent)
-            navigation_viewTable.textViewParentNameTable.visibility = View.VISIBLE
-        } else {
-            navigation_viewTable.menu.clear()
-            navigation_viewTable.inflateMenu(R.menu.menu_student)
-            navigation_viewTable.textViewParentNameTable.visibility = View.GONE
-        }
+        swipeRefreshLayoutTable.setDistanceToTriggerSync(500)
 
         val okhttp = OkHttpClient.Builder()
                 .connectTimeout(100, TimeUnit.SECONDS)
@@ -115,14 +102,58 @@ class TableActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelect
 
         mServerAPI = retrofit.create(IBRSC::class.java)
 
+
+
+        mSharedPreferences = getSharedPreferences(APP_SETTINGS, MODE_PRIVATE)
+
+        deviceId = Settings.Secure.getString(getApplicationContext().getContentResolver(), Settings.Secure.ANDROID_ID)
+        appDatabase = Room.databaseBuilder(this, AppDatabase::class.java, DATABASE_NAME).allowMainThreadQueries().build()
+
+        isParent = mSharedPreferences.getBoolean("isParent", false)
+        prefId = mSharedPreferences.getInt("prefId", 0)
+
+        tmpUser = appDatabase.userDao().getUserById(0)
+
+        tmpUserInfo = Gson().fromJson<Array<UserInfoModel>>(
+                tmpUser.uid.decrypt(deviceId),
+                object : TypeToken<Array<UserInfoModel>>() {}.type
+        )
+        prefDepartment = Gson().fromJson<Array<Departments>>(
+                tmpUser.prefDepartment.decrypt(deviceId),
+                arrayDepartmentsType
+        )
+        login = tmpUser.login.decrypt(deviceId) /*mSharedPreferences.getString("login", "")!!*/
+        password = tmpUser.password.decrypt(deviceId) /*mSharedPreferences.getString("password", "")!!*/
+
+        if (!mSharedPreferences.getBoolean("wasDepartments", false))
+            initDepartments()
+        else
+            departments = Gson().fromJson<Array<Departments>>(
+                    tmpUser.dids.decrypt(deviceId),
+                    arrayDepartmentsType
+            )
+
+
+        ids = tmpUserInfo.getIds()
+
+        count = mSharedPreferences.getInt("count", 0)
+
+        if (isParent) {
+            navigation_viewTable.menu.clear()
+            navigation_viewTable.inflateMenu(R.menu.menu_parent)
+            navigation_viewTable.textViewParentNameTable.visibility = View.VISIBLE
+        } else {
+            navigation_viewTable.menu.clear()
+            navigation_viewTable.inflateMenu(R.menu.menu_student)
+            navigation_viewTable.textViewParentNameTable.visibility = View.GONE
+        }
+
+
         recyclerViewTable.layoutManager = LinearLayoutManager(this)
 
         initRecyclerView()
 
-        if (!mSharedPreferences.contains("name"))
-            getNames()
-        else
-            setPerson()
+        setPerson()
 
         val toggle = ActionBarDrawerToggle(
                 this, drawer_layout_table, findViewById(R.id.toolbarTable), R.string.title_activity_login, R.string.title_activity_main2)
@@ -187,8 +218,8 @@ class TableActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelect
             if (isParent) R.id.nav_children else -1 -> {
                 if (user != null) {
                     AlertDialog.Builder(this)
-                            .setTitle("Выберите аккаунт:")
-                            .setItems(user!!.child_ids, { dialog, which ->
+                            .setTitle(resources.getString(R.string.changeUser))
+                            .setItems(user!!.child_ids!!.toTypedArray(), { dialog, which ->
                                 val name = Gson().fromJson(
                                         mSharedPreferences.getString("name", "[]"),
                                         NameModel::class.java
@@ -203,57 +234,32 @@ class TableActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelect
                 } else
                     Toast.makeText(this, resources.getString(R.string.loading), Toast.LENGTH_LONG).show()
             }
+            R.id.nav_setyear -> {
+                if (departments == null) {
+                    AlertDialog.Builder(this)
+                            .setTitle(resources.getString(R.string.check_year))
+                            .setMessage(resources.getString(R.string.loading))
+                            .create()
+                            .show()
+                } else {
+                    AlertDialog.Builder(this)
+                            .setTitle(resources.getString(R.string.check_year))
+                            .setItems(departments!!.getYears().toTypedArray()
+                            ) { dialog, which ->
+                                if (!prefDepartment.equals(departments!![which])) {
+                                    prefDepartment[prefId] = departments!![which]
+                                    appDatabase.userDao().setPrefDepartments(0, Gson().toJson(prefDepartment).encrypt(deviceId))
+                                    initRecyclerView()
+                                }
+                                drawer_layout_table.closeDrawers()
+                            }.show()
+                }
+            }
             else -> {
             }
         }
 
         return true
-    }
-
-    fun getNames() {
-        if (isParent) {
-            callListNames.add(
-                    mServerAPI.getName(
-                            login,
-                            password,
-                            mSharedPreferences.getString("ids", "[]"),
-                            APP_VERSION,
-                            "multiply"
-                    ))
-            callListNames.last().enqueue(
-                    object : Callback<NameModel> {
-                        override fun onFailure(call: Call<NameModel>, t: Throwable) {
-
-                        }
-
-                        override fun onResponse(call: Call<NameModel>, response: Response<NameModel>) {
-                            mSharedPreferences.edit().putString("name", Gson().toJson(response.body())).apply()
-                            setPerson()
-                        }
-                    }
-            )
-        } else {
-            callListNames.add(
-                    mServerAPI.getName(
-                            login,
-                            password,
-                            ids[0],
-                            APP_VERSION,
-                            "one"
-                    ))
-            callListNames.last().enqueue(
-                    object : Callback<NameModel> {
-                        override fun onFailure(call: Call<NameModel>, t: Throwable) {
-
-                        }
-
-                        override fun onResponse(call: Call<NameModel>, response: Response<NameModel>) {
-                            mSharedPreferences.edit().putString("name", Gson().toJson(response.body())).apply()
-                            setPerson()
-                        }
-                    }
-            )
-        }
     }
 
     fun setPerson() {
@@ -266,14 +272,14 @@ class TableActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelect
             val parentName = navigation_viewTable.textViewParentNameTable
 
             user = Gson().fromJson(
-                    if (mSharedPreferences.contains("name")) mSharedPreferences.getString("name", "[]") else "[]",
+                    tmpUser.name.decrypt(deviceId),
                     NameModel::class.java
             )
 
             if (isParent) {
                 textViewName.text = user?.child_ids!![prefId].replace("\"", "")
 
-                parentName.text = resources.getString(R.string.parent_name)  + " " +  prepareParentName(user?.name!!)
+                parentName.text = resources.getString(R.string.parent_name) + " " + prepareParentName(user?.name!!)
             } else {
                 textViewName.text = user?.name!!.replace("\"", "")
                 parentName.visibility = View.GONE
@@ -296,7 +302,10 @@ class TableActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelect
 
         callListTable.add(mServerAPI.getTable(login,
                 password,
-                curId))
+                curId,
+                tmpUserInfo[prefId].rooId,
+                prefDepartment[prefId].departmentId,
+                tmpUserInfo[prefId].instituteId))
         callListTable.last().enqueue(
                 object : Callback<Array<TableModel>> {
                     override fun onFailure(call: Call<Array<TableModel>>, t: Throwable) {
@@ -339,7 +348,10 @@ class TableActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelect
             callListTable.add(mServerAPI.getTable(
                     login,
                     password,
-                    curId
+                    curId,
+                    tmpUserInfo[prefId].rooId,
+                    tmpUserInfo[prefId].departmentId,
+                    tmpUserInfo[prefId].instituteId
             ))
             callListTable.last().enqueue(
                     object : Callback<Array<TableModel>> {
@@ -370,15 +382,53 @@ class TableActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelect
         }
     }
 
+    fun initDepartments() {
+        var curId = ""
+        if (isParent)
+            curId = ids[prefId]
+        else
+            curId = ids[0]
+
+        callListDepartments.add(
+                mServerAPI.getDiaryYears(
+                        login,
+                        password,
+                        curId,
+                        tmpUserInfo[prefId].rooId,
+                        prefDepartment[prefId].departmentId,
+                        tmpUserInfo[prefId].instituteId))
+
+        callListDepartments.last().enqueue(object : retrofit2.Callback<Array<Departments>> {
+            override fun onFailure(call: Call<Array<Departments>>, t: Throwable) {
+                runOnUiThread {
+                    Toast.makeText(applicationContext, resources.getString(R.string.error_load_departments), Toast.LENGTH_SHORT).show()
+                }
+            }
+
+            override fun onResponse(call: Call<Array<Departments>>, response: Response<Array<Departments>>) {
+                Log.w("departmentsSuccess", Gson().toJson(response.body()))
+                if (response.body() != null && response.body()!!.isNotEmpty()) {
+
+                    departments = response.body()!!
+                    appDatabase.userDao().setDepartments(0, Gson().toJson(departments).encrypt(deviceId))
+                    mSharedPreferences.edit().putBoolean("wasDepartments", true).apply()
+                }
+            }
+
+        })
+    }
+
     fun deleteAccount() {
         mSharedPreferences.edit().clear().apply()
+        appDatabase.userDao().deleteAll(tmpUser)
+        recyclerViewTable.adapter = null
 
-        for(i in callListTable.iterator())
-            if(!i.isCanceled && i.isExecuted)
+        for (i in callListTable.iterator())
+            if (!i.isCanceled && i.isExecuted)
                 i.cancel()
 
-        for(i in callListNames.iterator())
-            if(!i.isCanceled && i.isExecuted)
+        for (i in callListDepartments.iterator())
+            if (!i.isCanceled && i.isExecuted)
                 i.cancel()
 
 
@@ -412,5 +462,56 @@ class TableActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelect
 
         header.textViewName.text = name.replace("\"", "")
     }
+
+    fun String.encrypt(password: String): String {
+        val secretKeySpec = SecretKeySpec(password.toByteArray(), "AES")
+        val iv = ByteArray(16)
+        val charArray = password.toCharArray()
+        for (i in 0 until charArray.size) {
+            iv[i] = charArray[i].toByte()
+        }
+        val ivParameterSpec = IvParameterSpec(iv)
+
+        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+        cipher.init(Cipher.ENCRYPT_MODE, secretKeySpec, ivParameterSpec)
+
+        val encryptedValue = cipher.doFinal(this.toByteArray())
+        return Base64.encodeToString(encryptedValue, Base64.DEFAULT)
+    }
+
+    fun String.decrypt(password: String): String {
+        val secretKeySpec = SecretKeySpec(password.toByteArray(), "AES")
+        val iv = ByteArray(16)
+        val charArray = password.toCharArray()
+        for (i in 0 until charArray.size) {
+            iv[i] = charArray[i].toByte()
+        }
+        val ivParameterSpec = IvParameterSpec(iv)
+
+        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+        cipher.init(Cipher.DECRYPT_MODE, secretKeySpec, ivParameterSpec)
+
+        val decryptedByteValue = cipher.doFinal(Base64.decode(this, Base64.DEFAULT))
+        return String(decryptedByteValue)
+    }
+
+    fun Array<UserInfoModel>.getIds(): ArrayList<String> {
+        val result = ArrayList<String>()
+
+        for (i in this)
+            result.add(i.userId)
+
+        return result
+    }
+
+    private fun Array<Departments>.getYears(): ArrayList<String> {
+        val result = ArrayList<String>()
+
+        for (i in this)
+            result.add(i.name)
+
+        return result
+    }
+
 
 }
