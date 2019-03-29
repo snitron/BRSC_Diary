@@ -1,5 +1,6 @@
 package com.nitronapps.brsc_diary.Others
 
+import com.nitronapps.brsc_diary.Data.Departments
 import com.nitronapps.brsc_diary.Models.*
 import retrofit2.Call
 import retrofit2.http.*
@@ -41,7 +42,11 @@ interface IBRSC {
                    @Query("instituteId") instituteId: String?): Call<Array<ResultModel>>
 
     @Headers("User-Agent: Nitron Apps BRSC Diary Http Connector")
-    @GET("getName")
+    @GET("getDiaryYears")
     fun getDiaryYears(@Query("login") login: String?,
-                @Query("password") password: String?): Call<NameModel>
+                      @Query("password") password: String?,
+                      @Query("id") userID: String?,
+                      @Query("rooId") rooId: String?,
+                      @Query("departmentId") departmentId: String?,
+                      @Query("instituteId") instituteId: String?): Call<Array<Departments>>
 }

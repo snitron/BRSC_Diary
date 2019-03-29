@@ -38,6 +38,8 @@
                 android:layout_marginBottom="8dp"
                 android:text="@string/parent_name"
                 android:textColor="@android:color/black"
+                android:textAlignment="center"
+                android:fontFamily="@font/segoe_ui_light"
                 android:textSize="18sp"
                 android:textStyle="bold"
                 android:visibility="gone"

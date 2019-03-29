@@ -20,7 +20,7 @@ class ResultsAdapter(val data: Array<ResultModel>) : RecyclerView.Adapter<Result
     }
 
     override fun onBindViewHolder(p0: ResultsViewHolder, p1: Int) {
-        p0.lesson.text = data[p1].lesson.replace(" ", "")
+        p0.lesson.text = data[p1].lesson
         p0.m1.text = data[p1].m1.replace(" ", "")
         p0.m2.text = data[p1].m2.replace(" ", "")
 

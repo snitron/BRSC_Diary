@@ -2,34 +2,45 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools">
-    <item
-        android:id="@+id/nav_children"
-        android:icon="@drawable/baseline_face_black_48"
-        android:title="Ваши дети"
-        />
+    <group android:id="@+id/group1">
+        <item
+            android:id="@+id/nav_children"
+            android:icon="@drawable/baseline_face_black_48"
+            android:title="Ваши дети" />
 
-   <item
-        android:id="@+id/nav_diary"
-        android:icon="@drawable/baseline_list_black_48"
-        android:title="Дневник"
-        />
+        <item
+            android:id="@+id/nav_setyear"
+            android:icon="@drawable/baseline_calendar_today_black_48"
+            android:title="@string/year_of_study"></item>
+    </group>
 
-    <item
-        android:id="@+id/nav_table"
-        android:icon="@drawable/baseline_featured_play_list_black_48"
-        android:title="Табель успеваемости" />
+    <group android:id="@+id/group2">
+        <item
+            android:id="@+id/nav_diary"
+            android:icon="@drawable/baseline_list_black_48"
+            android:title="Дневник" />
 
-    <item
-        android:id="@+id/nav_results"
-        android:icon="@drawable/baseline_assessment_black_48"
-        android:title="Итоги" />
 
-    <item
-        android:id="@+id/nav_about"
-        android:icon="@drawable/baseline_info_black_48"
-        android:title="О приложении" />
-    <item
-        android:id="@+id/nav_quit"
-        android:icon="@drawable/baseline_exit_to_app_black_48"
-        android:title="Выйти" />
+        <item
+            android:id="@+id/nav_table"
+            android:icon="@drawable/baseline_featured_play_list_black_48"
+            android:title="Табель успеваемости" />
+
+        <item
+            android:id="@+id/nav_results"
+            android:icon="@drawable/baseline_assessment_black_48"
+            android:title="Итоги" />
+
+
+    </group>
+    <group android:id="@+id/group3">
+        <item
+            android:id="@+id/nav_about"
+            android:icon="@drawable/baseline_info_black_48"
+            android:title="О приложении" />
+        <item
+            android:id="@+id/nav_quit"
+            android:icon="@drawable/baseline_exit_to_app_black_48"
+            android:title="Выйти" />
+    </group>
 </menu>

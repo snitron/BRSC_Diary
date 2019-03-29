@@ -32,8 +32,8 @@
     <string name="accept_2">Вы действительно хотите выйти из аккаунта?</string>
     <string name="yes">Да</string>
     <string name="no">Нет</string>
-    <string name="about_desc">Мобильное приложение для электронного дневника\n\n Разработчик: Nitron Apps\n nitronapps@yandex.ru\n\n Версия 1.1.2\n2018 г.</string>
-    <string name="version">Версия 1.1.2\nNitron Apps. 2018 г.</string>
+    <string name="about_desc">Мобильное приложение для электронного дневника\n\n Разработчик: Nitron Apps\n nitronapps@yandex.ru\n\n Версия 1.2.0\n2019 г.</string>
+    <string name="version">Версия 1.2.0\nNitron Apps. 2019 г.</string>
     <string name="hello">Добро пожаловать!\n Введите логин и пароль:</string>
     <string name="login">ВОЙТИ</string>
     <string name="prev">\u0020\u0020ПРЕДЫДУЩАЯ НЕДЕЛЯ\u0020\u0020</string>
@@ -43,9 +43,21 @@
     <string name="student">Ученик</string>
     <string name="parent">Родитель</string>
     <string name="parent_name">Родитель:</string>
-    <string name="changeUser">Ваши аккаунты</string>
+    <string name="changeUser">Выберите аккаунт:</string>
 
     <string name="error_connection">Ошибка соединения. Повторите снова.</string>
     <string name="error_login">Неправильный логин или пароль.</string>
     <string name="title_activity_settings">SettingsActivity</string>
+    <string name="title_privacy_policy">Политика конфиденциальности</string>
+    <string name="check_year">Выберите год обучения:</string>
+    <string name="year_of_study">Год обучения</string>
+    <string name="error_load_departments">Не удалось загрузить года обучения. Перезапустите приложение.</string>
+    <string name="notification">Уведомление</string>
+    <string name="continue_accept">Для продолжения примите условия использования приложения.</string>
+    <string name="agree_privacy_policy">Я принимаю <u><b>Политику Конфиденциальности</b></u></string>
+    <string name="agree_data_policy">Я соглашаюсь с тем, что приложение хранит <u><b>следующие данные</b></u></string>
+    <string name="using_data">Используемые данные</string>
+    <string name="using_data_description">Приложение хранит ваш логин, пароль и уникальные идентификаторы для сайта https://elschool.ru/ в зашифрованном виде и использует их для своей работы.</string>
+
+
 </resources>

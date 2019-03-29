@@ -21,7 +21,7 @@ import com.nitronapps.brsc_diary.MainActivity
 import com.nitronapps.brsc_diary.Models.DayModel
 import com.nitronapps.brsc_diary.R
 
- class LessonsAdapter(val dayModel: DayModel, val context: Context) : RecyclerView.Adapter<LessonsAdapter.LessonsViewHolder>() {
+class LessonsAdapter(val dayModel: DayModel, val context: Context) : RecyclerView.Adapter<LessonsAdapter.LessonsViewHolder>() {
 
     val SPACES = 0
     val FILES = 1
@@ -39,14 +39,15 @@ import com.nitronapps.brsc_diary.R
             p0.lesson.text = Html.fromHtml(dayModel.lessons[p1])
             p0.homework.text = deleteSpaces(Html.fromHtml(dayModel.homeworks[p1]).toString(), FILES)
 
-            if(dayModel.hrefHw != null && dayModel.hrefHwNames != null && dayModel.hrefHw.size != 0)
-                if(dayModel.hrefHw[p1] != null && dayModel.hrefHwNames[p1] != null)
-                    p0.homework.text = p0.homework.text as String + "\n\n Зажмите и удерживайте для просмотра приложенных файлов."
+            if (dayModel.hrefHw != null && dayModel.hrefHwNames != null && dayModel.hrefHw.size != 0)
+                if (p1 < dayModel.hrefHw.size)
+                    if (dayModel.hrefHw[p1] != null && dayModel.hrefHwNames[p1] != null)
+                        p0.homework.text = p0.homework.text as String + "\n\n Зажмите и удерживайте для просмотра приложенных файлов."
 
             val mark = deleteSpaces(Html.fromHtml(dayModel.marks[p1]).toString(), SPACES).trim()
 
-            if(mark.isNotEmpty())
-                when(mark[mark.length - 1]){
+            if (mark.isNotEmpty())
+                when (mark[mark.length - 1]) {
                     '2' -> {
                         p0.mark.setBackgroundColor(Color.parseColor(RED_BCK))
                         p0.mark.setTextColor(Color.parseColor(RED_TXT))
@@ -67,17 +68,19 @@ import com.nitronapps.brsc_diary.R
                         p0.mark.setTextColor(Color.BLACK)
                     }
 
-                    else -> {}
+                    else -> {
+                    }
                 }
 
             p0.mark.text = mark
 
-            if(dayModel.teacherComment[p1] != null && !dayModel.teacherComment[p1].equals(""))
-                p0.mark.text  = p0.mark.text as String + " (i)"
+            if (dayModel.teacherComment[p1] != null && !dayModel.teacherComment[p1].equals(""))
+                p0.mark.text = p0.mark.text as String + " (i)"
 
             p0.homework.setOnLongClickListener({
-                if(dayModel.hrefHw != null && dayModel.hrefHwNames != null)
-                    if(dayModel.hrefHw[p1] != null && dayModel.hrefHwNames[p1] != null) {
+                if (dayModel.hrefHw != null && dayModel.hrefHwNames != null)
+                    if (p1 < dayModel.hrefHw.size)
+                    if (dayModel.hrefHw[p1] != null && dayModel.hrefHwNames[p1] != null && dayModel.hrefHw.size != 0) {
                         AlertDialog.Builder(it.context)
                                 .setTitle("Файлы:")
                                 .setItems(dayModel.hrefHwNames[p1], object : DialogInterface.OnClickListener {
@@ -90,22 +93,22 @@ import com.nitronapps.brsc_diary.R
 
                     }
                 return@setOnLongClickListener true
-                    })
+            })
 
             p0.mark.setOnLongClickListener({
-                if(dayModel.teacherComment[p1] != null && !dayModel.teacherComment[p1].equals("")) {
-                        AlertDialog.Builder(it.context)
-                                .setTitle("Комментарий учителя:")
-                                .setMessage(dayModel.teacherComment[p1]?.trim())
-                                .create()
-                                .show()
-                                }
+                if (dayModel.teacherComment[p1] != null && !dayModel.teacherComment[p1].equals("")) {
+                    AlertDialog.Builder(it.context)
+                            .setTitle("Комментарий учителя:")
+                            .setMessage(dayModel.teacherComment[p1]?.trim())
+                            .create()
+                            .show()
+                }
                 return@setOnLongClickListener true
             })
 
             p0.mark.setOnClickListener({
-                if(dayModel.teacherComment[p1] != null)
-                    if(!dayModel.teacherComment[p1]?.trim().equals(""))
+                if (dayModel.teacherComment[p1] != null)
+                    if (!dayModel.teacherComment[p1]?.trim().equals(""))
                         Toast.makeText(it.context, "Для просмотра комментария зажмите и удерживайте значок (i)", Toast.LENGTH_LONG).show()
             })
 
@@ -124,20 +127,20 @@ import com.nitronapps.brsc_diary.R
         return LessonsViewHolder(LayoutInflater.from(p0.context).inflate(R.layout.item_lesson, p0, false))
     }
 
-    fun deleteSpaces(string: String, option: Int): String{
+    fun deleteSpaces(string: String, option: Int): String {
         var length = 0
-        if(option == SPACES)
+        if (option == SPACES)
             for (i in 0 until string.length) {
                 length++
-                if(i + 2 < string.length)
-                    if(string[i] == ' ' && string[i + 2] != ' ')
+                if (i + 2 < string.length)
+                    if (string[i] == ' ' && string[i + 2] != ' ')
                         break
             }
 
-        if(option == FILES){
-            if(!string.contains("Файлы, прикрепленные учителем"))
+        if (option == FILES) {
+            if (!string.contains("Файлы, прикрепленные учителем"))
                 length = string.length
-            else{
+            else {
                 length = string.indexOf("Файлы, прикрепленные учителем") - 1
             }
         }

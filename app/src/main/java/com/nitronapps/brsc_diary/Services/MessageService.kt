@@ -24,6 +24,10 @@ class MessageService: FirebaseMessagingService(){
     private fun showNotification(messageBody: String){
         val intent = Intent(this, MainActivity::class.java)
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        intent.putExtra("type", "notification")
+        intent.putExtra("message", messageBody)
+
+
         val pendingIntent = PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_ONE_SHOT)
 
         val defaultSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)

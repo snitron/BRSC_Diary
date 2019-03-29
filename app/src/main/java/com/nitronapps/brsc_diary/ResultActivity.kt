@@ -32,7 +32,6 @@ import com.nitronapps.brsc_diary.Data.*
 import com.nitronapps.brsc_diary.Database.AppDatabase
 import com.nitronapps.brsc_diary.Database.UserDB
 import com.nitronapps.brsc_diary.Models.*
-import com.nitronapps.brsc_diary.Others.AESCipher
 import com.nitronapps.brsc_diary.Others.CustomTypefaceSpan
 import com.nitronapps.brsc_diary.Others.IBRSC
 import kotlinx.android.synthetic.main.activity_about.*
@@ -68,7 +67,8 @@ class ResultActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelec
     private var user: NameModel? = null
     private var prefId = 0
     private val arrayListType: Type = object : TypeToken<ArrayList<String>>() {}.type
-    private val callListNames = ArrayList<Call<NameModel>>()
+    private val arrayDepartmentsType: Type = object : TypeToken<Array<Departments>>() {}.type
+    private val callListDepartments = ArrayList<Call<Array<Departments>>>()
     private val callListResult = ArrayList<Call<Array<ResultModel>>>()
     private var login = ""
     private var password = ""
@@ -79,6 +79,8 @@ class ResultActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelec
     private lateinit var tmpUser: UserDB
     private lateinit var tmpUserInfo: Array<UserInfoModel>
     private lateinit var deviceId: String
+    private var departments: Array<Departments>? = null
+    private lateinit var prefDepartment: Array<Departments>
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -87,11 +89,25 @@ class ResultActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelec
 
         swipeRefreshLayoutResult.setColorSchemeColors(Color.parseColor("#2980b9"), Color.parseColor("#e74c3c"), Color.parseColor("#f1c40f"), Color.parseColor("#2ecc71"))
         swipeRefreshLayoutResult.isRefreshing = true
+        swipeRefreshLayoutResult.setDistanceToTriggerSync(500)
 
         mSharedPreferences = getSharedPreferences(APP_SETTINGS, MODE_PRIVATE)
         deviceId = Settings.Secure.getString(getApplicationContext().getContentResolver(), Settings.Secure.ANDROID_ID)
         appDatabase = Room.databaseBuilder(this, AppDatabase::class.java, DATABASE_NAME).allowMainThreadQueries().build()
 
+        val okhttp = OkHttpClient.Builder()
+                .connectTimeout(100, TimeUnit.SECONDS)
+                .readTimeout(100, TimeUnit.SECONDS)
+                .connectionSpecs(Arrays.asList(ConnectionSpec.MODERN_TLS, ConnectionSpec.COMPATIBLE_TLS))
+                .build()
+
+        val retrofit = Retrofit.Builder()
+                .baseUrl(SERVER_ADRESS)
+                .client(okhttp)
+                .addConverterFactory(GsonConverterFactory.create())
+                .build()
+
+        mServerAPI = retrofit.create(IBRSC::class.java)
 
         isParent = mSharedPreferences.getBoolean("isParent", false)
         prefId = mSharedPreferences.getInt("prefId", 0)
@@ -108,6 +124,18 @@ class ResultActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelec
 
         ids = tmpUserInfo.getIds()
 
+        prefDepartment = Gson().fromJson<Array<Departments>>(
+                tmpUser.prefDepartment.decrypt(deviceId),
+                arrayDepartmentsType
+        )
+
+        if (!mSharedPreferences.getBoolean("wasDepartments", false))
+            initDepartments()
+        else
+            departments = Gson().fromJson<Array<Departments>>(
+                    tmpUser.dids.decrypt(deviceId),
+                    arrayDepartmentsType
+            )
 
         count = mSharedPreferences.getInt("count", 0)
 
@@ -121,19 +149,7 @@ class ResultActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelec
             nav_viewResult.textViewParentNameResult.visibility = View.GONE
         }
 
-        val okhttp = OkHttpClient.Builder()
-                .connectTimeout(100, TimeUnit.SECONDS)
-                .readTimeout(100, TimeUnit.SECONDS)
-                .connectionSpecs(Arrays.asList(ConnectionSpec.MODERN_TLS, ConnectionSpec.COMPATIBLE_TLS))
-                .build()
 
-        val retrofit = Retrofit.Builder()
-                .baseUrl(SERVER_ADRESS)
-                .client(okhttp)
-                .addConverterFactory(GsonConverterFactory.create())
-                .build()
-
-        mServerAPI = retrofit.create(IBRSC::class.java)
 
         recyclerViewResult.layoutManager = LinearLayoutManager(this)
         initRecyclerView()
@@ -206,7 +222,7 @@ class ResultActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelec
             if (isParent) R.id.nav_children else -1 -> {
                 if (user != null) {
                     AlertDialog.Builder(this)
-                            .setTitle("Выберите аккаунт:")
+                            .setTitle(resources.getString(R.string.changeUser))
                             .setItems(user!!.child_ids!!.toTypedArray(), { dialog, which ->
                                 val name = Gson().fromJson(
                                         mSharedPreferences.getString("name", "[]"),
@@ -222,7 +238,27 @@ class ResultActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelec
                 } else
                     Toast.makeText(this, resources.getString(R.string.loading), Toast.LENGTH_LONG).show()
             }
-
+            R.id.nav_setyear -> {
+                if (departments == null) {
+                    AlertDialog.Builder(this)
+                            .setTitle(resources.getString(R.string.check_year))
+                            .setMessage(resources.getString(R.string.loading))
+                            .create()
+                            .show()
+                } else {
+                    AlertDialog.Builder(this)
+                            .setTitle(resources.getString(R.string.check_year))
+                            .setItems(departments!!.getYears().toTypedArray()
+                            ) { dialog, which ->
+                                if (!prefDepartment.equals(departments!![which])) {
+                                    prefDepartment[prefId] = departments!![which]
+                                    appDatabase.userDao().setPrefDepartments(0, Gson().toJson(prefDepartment).encrypt(deviceId))
+                                    initRecyclerView()
+                                }
+                                drawer_layoutResult.closeDrawers()
+                            }.show()
+                }
+            }
             else -> {
             }
         }
@@ -249,7 +285,7 @@ class ResultActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelec
                 password,
                 curId,
                 tmpUserInfo[prefId].rooId,
-                tmpUserInfo[prefId].departmentId,
+                prefDepartment[prefId].departmentId,
                 tmpUserInfo[prefId].instituteId))
         callListResult.last().enqueue(
                 object : Callback<Array<ResultModel>> {
@@ -289,7 +325,7 @@ class ResultActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelec
                     password,
                     curId,
                     tmpUserInfo[prefId].rooId,
-                    tmpUserInfo[prefId].departmentId,
+                    prefDepartment[prefId].departmentId,
                     tmpUserInfo[prefId].instituteId))
             callListResult.last().enqueue(
                     object : Callback<Array<ResultModel>> {
@@ -314,6 +350,41 @@ class ResultActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelec
         }
     }
 
+    fun initDepartments() {
+        var curId = ""
+        if (isParent)
+            curId = ids[prefId]
+        else
+            curId = ids[0]
+
+        callListDepartments.add(
+                mServerAPI.getDiaryYears(
+                        login,
+                        password,
+                        curId,
+                        tmpUserInfo[prefId].rooId,
+                        prefDepartment[prefId].departmentId,
+                        tmpUserInfo[prefId].instituteId))
+
+        callListDepartments.last().enqueue(object : retrofit2.Callback<Array<Departments>> {
+            override fun onFailure(call: Call<Array<Departments>>, t: Throwable) {
+                runOnUiThread {
+                    Toast.makeText(applicationContext, resources.getString(R.string.error_load_departments), Toast.LENGTH_SHORT).show()
+                }
+            }
+
+            override fun onResponse(call: Call<Array<Departments>>, response: Response<Array<Departments>>) {
+                Log.w("departmentsSuccess", Gson().toJson(response.body()))
+                if (response.body() != null && response.body()!!.isNotEmpty()) {
+
+                    departments = response.body()!!
+                    appDatabase.userDao().setDepartments(0, Gson().toJson(departments).encrypt(deviceId))
+                    mSharedPreferences.edit().putBoolean("wasDepartments", true).apply()
+                }
+            }
+
+        })
+    }
 
     fun setPerson() {
         runOnUiThread {
@@ -347,7 +418,7 @@ class ResultActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelec
             if (!i.isCanceled && i.isExecuted)
                 i.cancel()
 
-        for (i in callListNames.iterator())
+        for (i in callListDepartments.iterator())
             if (!i.isCanceled && i.isExecuted)
                 i.cancel()
 
@@ -415,4 +486,13 @@ class ResultActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelec
 
         return result
     }
+
+    private fun Array<Departments>.getYears(): ArrayList<String> {
+        val result = ArrayList<String>()
+
+        for (i in this)
+            result.add(i.name)
+
+    return result
+}
 }

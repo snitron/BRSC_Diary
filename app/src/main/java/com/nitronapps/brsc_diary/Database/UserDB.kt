@@ -11,5 +11,6 @@ data class UserDB(
         @ColumnInfo(name = "password") var password: String,
         @ColumnInfo(name = "uid") var uid: String, // JSON в виде UserInfoModel
         @ColumnInfo(name = "dids") var dids: String, // (departmensIds) JSON в виде Array<Departments>
-        @ColumnInfo(name = "name") var name: String // JSON of NameModel
+        @ColumnInfo(name = "name") var name: String, // JSON of NameModel
+        @ColumnInfo(name = "prefDepartment") var prefDepartment: String // JSON array of pref Department IDs
 )
