@@ -1,6 +1,6 @@
 package com.nitronapps.brsc_diary.Data
 
-const val SERVER_ADRESS = "https://nitronapps-diary.herokuapp.com/"
+const val SERVER_ADRESS = "http://84.201.154.23/"
 const val POLICY_ADRESS = "https://nitronapps-diary.herokuapp.com/policy"
 const val APP_SETTINGS = "account"
 const val RED_BCK = "#f2dede"
