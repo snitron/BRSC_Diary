@@ -26,6 +26,7 @@ import androidx.room.Room
 import com.google.android.material.navigation.NavigationView
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import com.mklimek.sslutilsandroid.SslUtils
 import com.nitronapps.brsc_diary.Adapters.ResultsAdapter
 import com.nitronapps.brsc_diary.Adapters.TableAdapter
 import com.nitronapps.brsc_diary.Data.*
@@ -94,11 +95,13 @@ class ResultActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelec
         mSharedPreferences = getSharedPreferences(APP_SETTINGS, MODE_PRIVATE)
         deviceId = Settings.Secure.getString(getApplicationContext().getContentResolver(), Settings.Secure.ANDROID_ID)
         appDatabase = Room.databaseBuilder(this, AppDatabase::class.java, DATABASE_NAME).allowMainThreadQueries().build()
+        val cert = SslUtils.getSslContextForCertificateFile(this, "certificate.crt")
 
         val okhttp = OkHttpClient.Builder()
                 .connectTimeout(100, TimeUnit.SECONDS)
                 .readTimeout(100, TimeUnit.SECONDS)
                 .connectionSpecs(Arrays.asList(ConnectionSpec.MODERN_TLS, ConnectionSpec.COMPATIBLE_TLS))
+                .sslSocketFactory(cert.socketFactory)
                 .build()
 
         val retrofit = Retrofit.Builder()
@@ -225,7 +228,7 @@ class ResultActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelec
                             .setTitle(resources.getString(R.string.changeUser))
                             .setItems(user!!.child_ids!!.toTypedArray(), { dialog, which ->
                                 val name = Gson().fromJson(
-                                        mSharedPreferences.getString("name", "[]"),
+                                        tmpUser.name.decrypt(deviceId),
                                         NameModel::class.java
                                 )
                                 drawer_layoutResult.closeDrawers()
@@ -281,6 +284,8 @@ class ResultActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelec
 
         val curPrefId = prefId
 
+        swipeRefreshLayoutResult.isRefreshing = true
+
         callListResult.add(mServerAPI.getResults(login,
                 password,
                 curId,
@@ -294,7 +299,9 @@ class ResultActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelec
                     }
 
                     override fun onResponse(call: Call<Array<ResultModel>>, response: Response<Array<ResultModel>>) {
-                        swipeRefreshLayoutResult.isRefreshing = false
+                        runOnUiThread {
+                            swipeRefreshLayoutResult.isRefreshing = false
+                        }
 
                         if (response.body() != null) {
                             if (curPrefId == prefId) {
@@ -308,8 +315,6 @@ class ResultActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelec
 
                         } else
                             Toast.makeText(applicationContext, resources.getString(R.string.error_connection), Toast.LENGTH_LONG).show()
-
-                        swipeRefreshLayoutResult.isRefreshing = false
                     }
                 }
         )
@@ -343,7 +348,9 @@ class ResultActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelec
                             } else
                                 Toast.makeText(applicationContext, resources.getString(R.string.error_connection), Toast.LENGTH_LONG).show()
 
-                            swipeRefreshLayoutResult.isRefreshing = false
+                            runOnUiThread {
+                                swipeRefreshLayoutResult.isRefreshing = false
+                            }
                         }
                     }
             )
@@ -440,8 +447,8 @@ class ResultActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelec
     }
 
     fun setPersonName(name: String) {
-        navigation_viewTable.removeHeaderView(navigation_viewTable.getHeaderView(0))
-        val header = navigation_viewTable.inflateHeaderView(R.layout.nav_header)
+        nav_viewResult.removeHeaderView(nav_viewResult.getHeaderView(0))
+        val header = nav_viewResult.inflateHeaderView(R.layout.nav_header)
 
         header.textViewName.text = name.replace("\"", "")
     }
@@ -493,6 +500,6 @@ class ResultActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelec
         for (i in this)
             result.add(i.name)
 
-    return result
-}
+        return result
+    }
 }

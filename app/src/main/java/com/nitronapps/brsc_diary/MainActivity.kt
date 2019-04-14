@@ -1,16 +1,12 @@
 package com.nitronapps.brsc_diary
 
 
-import android.content.ContentResolver
-import android.content.Context
 import android.content.Intent
 import android.content.Intent.FLAG_ACTIVITY_NO_ANIMATION
 import android.content.SharedPreferences
 import android.graphics.Color
-import android.graphics.Paint
 import android.graphics.Rect
 import android.graphics.Typeface
-import android.net.wifi.WifiManager
 import android.os.Bundle
 import android.provider.Settings
 import android.text.Spannable
@@ -42,7 +38,6 @@ import kotlinx.android.synthetic.main.content_main.*
 import kotlinx.android.synthetic.main.nav_header.view.*
 import okhttp3.*
 import retrofit2.Call
-import retrofit2.Callback
 import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
@@ -55,8 +50,8 @@ import javax.crypto.Cipher
 import javax.crypto.spec.IvParameterSpec
 import javax.crypto.spec.SecretKeySpec
 import android.util.Base64
-import android.view.Menu
-import androidx.room.migration.Migration
+import com.google.firebase.iid.FirebaseInstanceId
+import com.mklimek.sslutilsandroid.SslUtils
 import com.nitronapps.brsc_diary.Data.*
 import com.nitronapps.brsc_diary.Database.UserDB
 import com.nitronapps.brsc_diary.Models.UserInfoModel
@@ -88,8 +83,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        if(intent.getStringExtra("type") != null)
-            if(intent.getStringExtra("type").equals("notification"))
+        if (intent.getStringExtra("message") != null)
                 AlertDialog.Builder(this)
                         .setTitle(resources.getString(R.string.notification))
                         .setMessage(intent.getStringExtra("message"))
@@ -103,10 +97,14 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
         mSharedPreferences = getSharedPreferences(APP_SETTINGS, MODE_PRIVATE)
 
+
+        val cert = SslUtils.getSslContextForCertificateFile(this, "certificate.crt")
+
         mOkHttpClient = OkHttpClient.Builder()
                 .connectTimeout(100, TimeUnit.SECONDS)
                 .readTimeout(100, TimeUnit.SECONDS)
                 .connectionSpecs(Arrays.asList(ConnectionSpec.MODERN_TLS, ConnectionSpec.COMPATIBLE_TLS))
+                .sslSocketFactory(cert.socketFactory)
                 .build()
 
         val retrofit = Retrofit.Builder()
@@ -528,9 +526,9 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             }
 
             override fun onResponse(call: Call<Array<DayModel>>, response: Response<Array<DayModel>>) {
-
-                swipeRefreshLayout.isRefreshing = false
-
+                runOnUiThread {
+                    swipeRefreshLayout.isRefreshing = false
+                }
                 Log.w("mainSucces", Gson().toJson(response.body()))
                 if (response.body() != null) {
                     if (curPrefId == prefId) {

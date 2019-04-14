@@ -24,6 +24,7 @@ import androidx.room.Room
 import com.google.android.material.navigation.NavigationView
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import com.mklimek.sslutilsandroid.SslUtils
 import com.nitronapps.brsc_diary.Adapters.ResultsAdapter
 import com.nitronapps.brsc_diary.Adapters.TableAdapter
 import com.nitronapps.brsc_diary.Data.*
@@ -88,10 +89,13 @@ class TableActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelect
         swipeRefreshLayoutTable.isRefreshing = true
         swipeRefreshLayoutTable.setDistanceToTriggerSync(500)
 
+        val cert = SslUtils.getSslContextForCertificateFile(this, "certificate.crt")
+
         val okhttp = OkHttpClient.Builder()
                 .connectTimeout(100, TimeUnit.SECONDS)
                 .readTimeout(100, TimeUnit.SECONDS)
                 .connectionSpecs(Arrays.asList(ConnectionSpec.MODERN_TLS, ConnectionSpec.COMPATIBLE_TLS))
+                .sslSocketFactory(cert.socketFactory)
                 .build()
 
         val retrofit = Retrofit.Builder()
@@ -124,6 +128,7 @@ class TableActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelect
         )
         login = tmpUser.login.decrypt(deviceId) /*mSharedPreferences.getString("login", "")!!*/
         password = tmpUser.password.decrypt(deviceId) /*mSharedPreferences.getString("password", "")!!*/
+        ids = tmpUserInfo.getIds()
 
         if (!mSharedPreferences.getBoolean("wasDepartments", false))
             initDepartments()
@@ -134,7 +139,7 @@ class TableActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelect
             )
 
 
-        ids = tmpUserInfo.getIds()
+
 
         count = mSharedPreferences.getInt("count", 0)
 
@@ -221,7 +226,7 @@ class TableActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelect
                             .setTitle(resources.getString(R.string.changeUser))
                             .setItems(user!!.child_ids!!.toTypedArray(), { dialog, which ->
                                 val name = Gson().fromJson(
-                                        mSharedPreferences.getString("name", "[]"),
+                                        tmpUser.name.decrypt(deviceId),
                                         NameModel::class.java
                                 )
                                 drawer_layout_table.closeDrawers()
@@ -249,6 +254,7 @@ class TableActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelect
                                 if (!prefDepartment.equals(departments!![which])) {
                                     prefDepartment[prefId] = departments!![which]
                                     appDatabase.userDao().setPrefDepartments(0, Gson().toJson(prefDepartment).encrypt(deviceId))
+                                    recyclerViewTable.adapter = null
                                     initRecyclerView()
                                 }
                                 drawer_layout_table.closeDrawers()
@@ -328,7 +334,7 @@ class TableActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelect
                                 recyclerViewTable.adapter = adapter
                                 recyclerViewTable.addItemDecoration(MainActivity.SpacesItemDecoration(5))
                             } else
-                                swipeRefreshLayoutResult.isRefreshing = true
+                                swipeRefreshLayoutTable.isRefreshing = true
 
                         } else
                             Toast.makeText(applicationContext, resources.getString(R.string.error_connection), Toast.LENGTH_LONG).show()

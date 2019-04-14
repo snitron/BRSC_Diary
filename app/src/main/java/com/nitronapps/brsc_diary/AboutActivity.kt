@@ -22,6 +22,7 @@ import androidx.room.Room
 import com.google.android.material.navigation.NavigationView
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import com.mklimek.sslutilsandroid.SslUtils
 import com.nitronapps.brsc_diary.Data.*
 import com.nitronapps.brsc_diary.Database.AppDatabase
 import com.nitronapps.brsc_diary.Database.UserDB
@@ -102,11 +103,13 @@ class AboutActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelect
                 tmpUser.prefDepartment.decrypt(deviceId),
                 arrayDepartmentsType
         )
+        val cert = SslUtils.getSslContextForCertificateFile(this, "certificate.crt")
 
         val okhttp = OkHttpClient.Builder()
                 .connectTimeout(100, TimeUnit.SECONDS)
                 .readTimeout(100, TimeUnit.SECONDS)
                 .connectionSpecs(Arrays.asList(ConnectionSpec.MODERN_TLS, ConnectionSpec.COMPATIBLE_TLS))
+                .sslSocketFactory(cert.socketFactory)
                 .build()
 
         val retrofit = Retrofit.Builder()
@@ -141,8 +144,7 @@ class AboutActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelect
         val menu = nav_view.menu
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N)
-
-            textViewPrivacyPolicy.text = Html.fromHtml("<a href=\"" + POLICY_ADRESS + "\">" + resources.getString(R.string.title_privacy_policy) + "</a>",Html.FROM_HTML_MODE_COMPACT)
+            textViewPrivacyPolicy.text = Html.fromHtml("<a href=\"" + POLICY_ADRESS + "\">" + resources.getString(R.string.title_privacy_policy) + "</a>", Html.FROM_HTML_MODE_COMPACT)
 
         else
             textViewPrivacyPolicy.text = Html.fromHtml("<a href=\"" + POLICY_ADRESS + "\">" + resources.getString(R.string.title_privacy_policy) + "</a>")
@@ -204,10 +206,10 @@ class AboutActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelect
                             .setTitle(resources.getString(R.string.changeUser))
                             .setItems(user!!.child_ids!!.toTypedArray(), { dialog, which ->
                                 val name = Gson().fromJson(
-                                        mSharedPreferences.getString("name", "[]"),
+                                        tmpUser.name.decrypt(deviceId),
                                         NameModel::class.java
                                 )
-                                drawer_layout.closeDrawers()
+                                drawer_layoutAbout.closeDrawers()
                                 prefId = which
                                 mSharedPreferences.edit().putInt("prefId", which).apply()
                                 setPersonName(name?.child_ids!![prefId])

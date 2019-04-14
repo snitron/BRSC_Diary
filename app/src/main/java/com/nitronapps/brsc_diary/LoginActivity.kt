@@ -6,6 +6,7 @@ import android.view.View
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.provider.Settings
 import android.text.Html
 import android.util.Base64
@@ -16,6 +17,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.room.Room
 import com.google.gson.Gson
+import com.mklimek.sslutilsandroid.SslUtils
 import com.nitronapps.brsc_diary.Data.*
 import com.nitronapps.brsc_diary.Database.AppDatabase
 import com.nitronapps.brsc_diary.Database.UserDB
@@ -25,6 +27,7 @@ import com.nitronapps.brsc_diary.Models.UserModel
 import com.nitronapps.brsc_diary.Others.IBRSC
 
 import kotlinx.android.synthetic.main.activity_login.*
+import kotlinx.android.synthetic.main.content_about.*
 import okhttp3.*
 import retrofit2.Call
 import retrofit2.Callback
@@ -51,10 +54,13 @@ class LoginActivity : AppCompatActivity() {
         val mSharedPreferences = getSharedPreferences(APP_SETTINGS, Context.MODE_PRIVATE)
         val device_id = Settings.Secure.getString(getApplicationContext().getContentResolver(), Settings.Secure.ANDROID_ID)
 
+        val cert = SslUtils.getSslContextForCertificateFile(this, "certificate.crt")
+
         val okhttp = OkHttpClient.Builder()
                 .connectTimeout(100, TimeUnit.SECONDS)
                 .readTimeout(100, TimeUnit.SECONDS)
                 .connectionSpecs(Arrays.asList(ConnectionSpec.MODERN_TLS, ConnectionSpec.COMPATIBLE_TLS))
+                .sslSocketFactory(cert.socketFactory)
                 .build()
 
         val retrofit = Retrofit.Builder()
@@ -64,9 +70,6 @@ class LoginActivity : AppCompatActivity() {
                 .build()
 
         val serverApi = retrofit.create(IBRSC::class.java)
-
-        textViewPrivacyPolicyCheckbox.text = Html.fromHtml(resources.getString(R.string.agree_privacy_policy))
-        textViewUserDataCheckbox.text = Html.fromHtml(resources.getString(R.string.agree_data_policy))
 
         textViewPrivacyPolicyCheckbox.setOnClickListener {
             startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(POLICY_ADRESS)))
