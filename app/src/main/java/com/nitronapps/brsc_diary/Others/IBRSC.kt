@@ -1,6 +1,9 @@
 package com.nitronapps.brsc_diary.Others
 
+import com.google.gson.annotations.SerializedName
+import com.nitronapps.brsc_diary.Data.Balance
 import com.nitronapps.brsc_diary.Data.Departments
+import com.nitronapps.brsc_diary.Data.Info
 import com.nitronapps.brsc_diary.Models.*
 import retrofit2.Call
 import retrofit2.http.*
@@ -49,4 +52,12 @@ interface IBRSC {
                       @Query("rooId") rooId: String?,
                       @Query("departmentId") departmentId: String?,
                       @Query("instituteId") instituteId: String?): Call<Array<Departments>>
+    @Headers("User-Agent: Nitron Apps BRSC Diary Http Connector")
+    @GET("getBalance")
+    fun getBalance(@Query("login") login: String,
+                   @Query("password") password: String): Call<BalanceCall>
 }
+
+data class BalanceCall(@SerializedName("isChild") val isChild: Boolean,
+                       @SerializedName("res") var res: ArrayList<Balance>,
+                       @SerializedName("info") var info: ArrayList<Info>){}

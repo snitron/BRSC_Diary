@@ -33,6 +33,7 @@ import com.nitronapps.brsc_diary.Others.IBRSC
 import kotlinx.android.synthetic.main.activity_about.*
 import kotlinx.android.synthetic.main.activity_about.view.*
 import kotlinx.android.synthetic.main.activity_main.*
+import kotlinx.android.synthetic.main.activity_main.view.*
 import kotlinx.android.synthetic.main.app_bar_about.*
 import kotlinx.android.synthetic.main.content_about.*
 import kotlinx.android.synthetic.main.nav_header.view.*
@@ -49,6 +50,7 @@ import java.util.concurrent.TimeUnit
 import javax.crypto.Cipher
 import javax.crypto.spec.IvParameterSpec
 import javax.crypto.spec.SecretKeySpec
+import javax.net.ssl.X509TrustManager
 
 class AboutActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener {
 
@@ -237,6 +239,11 @@ class AboutActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelect
                             }.show()
                 }
             }
+
+            R.id.nav_balance -> {
+                startActivity(Intent(this, InformationActivity::class.java))
+            }
+
             else -> {
             }
         }
@@ -282,7 +289,6 @@ class AboutActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelect
 
             if (isParent) {
                 textViewName.text = user?.child_ids!![prefId].replace("\"", "")
-
                 parentName.text = resources.getString(R.string.parent_name) + " " + prepareParentName(user?.name!!)
             } else {
                 textViewName.text = user?.name!!.replace("\"", "")

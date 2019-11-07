@@ -9,9 +9,9 @@
             android:title="Ваши дети" />
 
         <item
-            android:id="@+id/nav_setyear"
-            android:icon="@drawable/baseline_calendar_today_black_48"
-            android:title="@string/year_of_study"></item>
+            android:id="@+id/nav_balance"
+            android:icon="@drawable/baseline_account_balance_wallet_black_36"
+            android:title="@string/balance"></item>
     </group>
 
     <group android:id="@+id/group2">
@@ -30,6 +30,11 @@
             android:id="@+id/nav_results"
             android:icon="@drawable/baseline_assessment_black_48"
             android:title="Итоги" />
+
+        <item
+            android:id="@+id/nav_setyear"
+            android:icon="@drawable/baseline_calendar_today_black_48"
+            android:title="@string/year_of_study"></item>
 
 
     </group>

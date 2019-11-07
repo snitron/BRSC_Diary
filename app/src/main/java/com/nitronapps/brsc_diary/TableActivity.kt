@@ -261,6 +261,11 @@ class TableActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelect
                             }.show()
                 }
             }
+
+            R.id.nav_balance -> {
+                startActivity(Intent(this, InformationActivity::class.java))
+            }
+
             else -> {
             }
         }
@@ -274,7 +279,6 @@ class TableActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelect
             val header = navigation_viewTable.inflateHeaderView(R.layout.nav_header)
 
             val textViewName = header.textViewName
-
             val parentName = navigation_viewTable.textViewParentNameTable
 
             user = Gson().fromJson(
@@ -284,7 +288,6 @@ class TableActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelect
 
             if (isParent) {
                 textViewName.text = user?.child_ids!![prefId].replace("\"", "")
-
                 parentName.text = resources.getString(R.string.parent_name) + " " + prepareParentName(user?.name!!)
             } else {
                 textViewName.text = user?.name!!.replace("\"", "")

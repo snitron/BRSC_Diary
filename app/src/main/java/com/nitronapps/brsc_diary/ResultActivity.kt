@@ -262,6 +262,11 @@ class ResultActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelec
                             }.show()
                 }
             }
+
+            R.id.nav_balance -> {
+                startActivity(Intent(this, InformationActivity::class.java))
+            }
+
             else -> {
             }
         }
@@ -400,6 +405,8 @@ class ResultActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelec
 
             val textViewName = header.textViewName
             val parentName = nav_viewResult.textViewParentNameResult
+
+
 
             user = Gson().fromJson(
                     tmpUser.name.decrypt(deviceId),

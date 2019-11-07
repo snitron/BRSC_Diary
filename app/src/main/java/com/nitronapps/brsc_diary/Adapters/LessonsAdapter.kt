@@ -39,10 +39,10 @@ class LessonsAdapter(val dayModel: DayModel, val context: Context) : RecyclerVie
             p0.lesson.text = Html.fromHtml(dayModel.lessons[p1])
             p0.homework.text = deleteSpaces(Html.fromHtml(dayModel.homeworks[p1]).toString(), FILES)
 
-            if (dayModel.hrefHw != null && dayModel.hrefHwNames != null && dayModel.hrefHw.size != 0)
+        /*    if (dayModel.hrefHw != null && dayModel.hrefHwNames != null && dayModel.hrefHw.size != 0)
                 if (p1 < dayModel.hrefHw.size)
                     if (dayModel.hrefHw[p1] != null && dayModel.hrefHwNames[p1] != null)
-                        p0.homework.text = p0.homework.text as String + "\n\n Зажмите и удерживайте для просмотра приложенных файлов."
+                        p0.homework.text = p0.homework.text as String + "\n\n Зажмите и удерживайте для просмотра приложенных файлов."*/
 
             val mark = deleteSpaces(Html.fromHtml(dayModel.marks[p1]).toString(), SPACES).trim()
 
@@ -77,7 +77,7 @@ class LessonsAdapter(val dayModel: DayModel, val context: Context) : RecyclerVie
             if (dayModel.teacherComment[p1] != null && !dayModel.teacherComment[p1].equals(""))
                 p0.mark.text = p0.mark.text as String + " (i)"
 
-            p0.homework.setOnLongClickListener({
+          /*  p0.homework.setOnLongClickListener({
                 if (dayModel.hrefHw != null && dayModel.hrefHwNames != null)
                     if (p1 < dayModel.hrefHw.size)
                     if (dayModel.hrefHw[p1] != null && dayModel.hrefHwNames[p1] != null && dayModel.hrefHw.size != 0) {
@@ -85,7 +85,7 @@ class LessonsAdapter(val dayModel: DayModel, val context: Context) : RecyclerVie
                                 .setTitle("Файлы:")
                                 .setItems(dayModel.hrefHwNames[p1], object : DialogInterface.OnClickListener {
                                     override fun onClick(dialog: DialogInterface?, which: Int) {
-                                        it.context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(dayModel.hrefHw[p1]?.get(which))))
+                                        it.context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://elschool.ru" + dayModel.hrefHw[p1]?.get(which))))
                                     }
                                 }).create()
                                 .show()
@@ -93,7 +93,7 @@ class LessonsAdapter(val dayModel: DayModel, val context: Context) : RecyclerVie
 
                     }
                 return@setOnLongClickListener true
-            })
+            })*/
 
             p0.mark.setOnLongClickListener({
                 if (dayModel.teacherComment[p1] != null && !dayModel.teacherComment[p1].equals("")) {

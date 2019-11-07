@@ -50,6 +50,7 @@ import javax.crypto.Cipher
 import javax.crypto.spec.IvParameterSpec
 import javax.crypto.spec.SecretKeySpec
 import android.util.Base64
+import com.google.android.gms.tasks.OnCompleteListener
 import com.google.firebase.iid.FirebaseInstanceId
 import com.mklimek.sslutilsandroid.SslUtils
 import com.nitronapps.brsc_diary.Data.*
@@ -104,7 +105,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 .connectTimeout(100, TimeUnit.SECONDS)
                 .readTimeout(100, TimeUnit.SECONDS)
                 .connectionSpecs(Arrays.asList(ConnectionSpec.MODERN_TLS, ConnectionSpec.COMPATIBLE_TLS))
-                .sslSocketFactory(cert.socketFactory)
+                        .sslSocketFactory(cert.socketFactory)
                 .build()
 
         val retrofit = Retrofit.Builder()
@@ -166,8 +167,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
         isParent = mSharedPreferences.getBoolean("isParent", false)
         prefId = mSharedPreferences.getInt("prefId", 0)
-
-
 
         swipeRefreshLayout.setColorSchemeColors(Color.parseColor("#2980b9"), Color.parseColor("#e74c3c"), Color.parseColor("#f1c40f"), Color.parseColor("#2ecc71"))
         swipeRefreshLayout.isRefreshing = true
@@ -397,6 +396,11 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                             }.show()
                 }
             }
+
+            R.id.nav_balance -> {
+                startActivity(Intent(this, InformationActivity::class.java))
+            }
+
             else -> {
             }
         }
@@ -418,6 +422,8 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
             val textViewName = header.textViewName
             val parentName = navigation_view.textViewParentNameMain
+
+
 
             user = Gson().fromJson(
                     tmpUser.name.decrypt(deviceId),
